@@ -22,7 +22,7 @@ export const grants: Grant[] = [
     url: 'https://www.daegu.go.kr',
     deadline: '상시',
     contact: '대구시 소상공인지원과 / 053-xxxx-xxxx',
-    tags: ['창업', '경영안정', '컨설팅'],
+    tags: ['청년창업자 우대', 'iM뱅크 특례보증'],
   },
   {
     id: 'dg-junggu-restaurant',
@@ -34,7 +34,7 @@ export const grants: Grant[] = [
     url: 'https://junggu.daegu.go.kr',
     deadline: '2026-12-31',
     contact: '중구청 경제과 / 053-xxxx-xxxx',
-    tags: ['상권활성화', '시설개선', '홍보'],
+    tags: ['전통시장·골목상권', '대구로페이/정산 연계'],
   },
   {
     id: 'dg-sme-it',
@@ -46,7 +46,7 @@ export const grants: Grant[] = [
     url: 'https://www.daegu.go.kr/digital-support',
     deadline: '상시(프로그램별 상이)',
     contact: '대구시 디지털전환팀 / 053-xxxx-xxxx',
-    tags: ['디지털', '온라인판매', '배달'],
+    tags: ['대구로페이/정산 연계', 'iM뱅크 특례보증'],
   },
   {
     id: 'dg-suseong-visitor',
@@ -58,7 +58,7 @@ export const grants: Grant[] = [
     url: 'https://suseong.daegu.go.kr',
     deadline: '2026-11-30',
     contact: '수성구청 문화관광과 / 053-xxxx-xxxx',
-    tags: ['관광', '체험', '홍보'],
+    tags: ['전통시장·골목상권', '청년창업자 우대'],
   },
   {
     id: 'dg-dalseo-renew',
@@ -70,7 +70,7 @@ export const grants: Grant[] = [
     url: 'https://dalseo.daegu.go.kr',
     deadline: '2026-10-15',
     contact: '달서구청 경제지원과 / 053-xxxx-xxxx',
-    tags: ['시설개선', '안전', '에너지절감'],
+    tags: ['iM뱅크 특례보증', '대구로페이/정산 연계'],
   },
 ];
 

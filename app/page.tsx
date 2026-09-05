@@ -200,6 +200,9 @@ export default function Home() {
   const [selectedIndustry, setSelectedIndustry] = useState("카페");
   const [selectedRevenue, setSelectedRevenue] = useState("3천만~5천만 원");
   const [isAiOpen, setIsAiOpen] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [loginLoadingProvider, setLoginLoadingProvider] = useState<string | null>(null);
 
   const currentData = useMemo(() => {
     const regionData = marketData[selectedRegion] ?? marketData["대구 중구"];
@@ -207,8 +210,69 @@ export default function Home() {
     return industryData[selectedRevenue] ?? industryData["3천만~5천만 원"] ?? defaultStats;
   }, [selectedRegion, selectedIndustry, selectedRevenue]);
 
+  const handleSocialLogin = async (provider: string) => {
+    setLoginLoadingProvider(provider);
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    setIsLoggedIn(true);
+    setIsLoginModalOpen(false);
+    setSelectedRegion("대구 중구");
+    setSelectedIndustry("카페");
+    setSelectedRevenue("3천만~5천만 원");
+    setLoginLoadingProvider(null);
+  };
+
+  const heroTitle = isLoggedIn
+    ? "김사장님(대구 중구 카페), 반갑습니다!"
+    : "더 나은 상권 선택을 시작하세요.";
+
+  const heroSubtitle = isLoggedIn
+    ? "사장님 매장에 딱 맞는 지원 정책 3건이 기다리고 있습니다."
+    : "지역, 업종, 매출 조건을 선택해 적합한 상권 전략을 빠르게 검토할 수 있습니다.";
+
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(20,184,166,0.22),_transparent_26%),linear-gradient(180deg,_#f0fdf4_0%,_#ecfdf5_38%,_#f6fff9_100%)] px-4 py-8 text-slate-800 sm:px-6 lg:px-8">
+      <header className="mx-auto mb-6 flex max-w-6xl items-center justify-between gap-4 rounded-[26px] border border-emerald-200 bg-white/85 px-5 py-4 shadow-[0_12px_30px_rgba(16,185,129,0.08)] backdrop-blur-sm">
+        <div className="flex items-center gap-3">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">대구시 소상공인 상권 분석 & 지원금 플랫폼</p>
+          <a
+            href="/generator"
+            className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800 transition hover:bg-emerald-100"
+          >
+            📄 AI 서류/사업계획서 생성
+          </a>
+        </div>
+
+        {!isLoggedIn ? (
+          <button
+            type="button"
+            onClick={() => setIsLoginModalOpen(true)}
+            className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-500"
+          >
+            로그인 / 회원가입
+          </button>
+        ) : (
+          <div className="flex items-center gap-3">
+            <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800">
+              🟢 대구 중구 카페 사장님
+            </span>
+            <div className="flex items-center gap-2 rounded-full border border-emerald-200 bg-white px-3 py-2 shadow-sm">
+              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-green-400 text-xs font-bold text-white">
+                K
+              </div>
+              <span className="text-sm font-semibold text-emerald-950">김사장 님</span>
+              <span className="text-lg">🟢</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsLoggedIn(false)}
+              className="rounded-xl border border-emerald-200 bg-white px-3 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-50"
+            >
+              로그아웃
+            </button>
+          </div>
+        )}
+      </header>
+
       <div className="mx-auto max-w-6xl">
         <div className="overflow-hidden rounded-[32px] border border-emerald-200 bg-white/80 shadow-[0_30px_80px_rgba(16,185,129,0.14)] backdrop-blur-sm">
           <div className="grid gap-0 lg:grid-cols-[1.15fr_0.85fr]">
@@ -223,11 +287,11 @@ export default function Home() {
                 </div>
 
                 <h1 className="max-w-md text-4xl font-bold leading-tight tracking-[-0.04em] sm:text-5xl">
-                  더 나은 상권 선택을 시작하세요.
+                  {heroTitle}
                 </h1>
 
                 <p className="mt-4 max-w-lg text-base text-emerald-50/90 sm:text-lg">
-                  지역, 업종, 매출 조건을 선택해 적합한 상권 전략을 빠르게 검토할 수 있습니다.
+                  {heroSubtitle}
                 </p>
 
                 <div className="mt-8 rounded-3xl border border-white/20 bg-white/10 p-5 shadow-lg shadow-emerald-900/10">
@@ -356,9 +420,58 @@ export default function Home() {
         </div>
       </div>
 
-      <div className="mx-auto max-w-6xl mt-8 p-4">
-        <GrantMatcher initialRegion="대구 중구" initialBusinessType="음식점업" />
+      <div className="mx-auto mt-8 max-w-6xl p-4">
+        <GrantMatcher
+          initialRegion="대구 중구"
+          initialBusinessType="음식점업"
+          selectedRegion={selectedRegion}
+          selectedBusinessType={selectedIndustry}
+        />
       </div>
+
+      {isLoginModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-[28px] border border-emerald-200 bg-white p-6 shadow-[0_24px_80px_rgba(15,118,110,0.25)]">
+            <div className="text-center">
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-700">대구시 소상공인 맞춤 지원 모바일 플랫폼</p>
+              <h3 className="mt-3 text-2xl font-extrabold text-emerald-950">3초 만에 로그인하고</h3>
+              <p className="mt-2 text-sm text-slate-600">내 매장 맞춤 지원금과 상권 분석을 받아보세요.</p>
+            </div>
+
+            <div className="mt-6 space-y-3">
+              <button
+                type="button"
+                disabled={!!loginLoadingProvider}
+                onClick={() => handleSocialLogin('kakao')}
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#FEE500] py-3 text-base font-semibold text-black transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                <span>💬</span>
+                {loginLoadingProvider === 'kakao' ? '로그인 중...' : '카카오로 시작하기'}
+              </button>
+
+              <button
+                type="button"
+                disabled={!!loginLoadingProvider}
+                onClick={() => handleSocialLogin('google')}
+                className="flex w-full items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white py-3 text-base font-semibold text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                <span>🔵</span>
+                {loginLoadingProvider === 'google' ? '로그인 중...' : '구글로 시작하기'}
+              </button>
+
+              <button
+                type="button"
+                disabled={!!loginLoadingProvider}
+                onClick={() => handleSocialLogin('apple')}
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-black py-3 text-base font-semibold text-white transition hover:bg-slate-900 disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                <span></span>
+                {loginLoadingProvider === 'apple' ? '로그인 중...' : 'Apple로 시작하기'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <AIConsultant open={isAiOpen} onClose={() => setIsAiOpen(false)} />
     </main>

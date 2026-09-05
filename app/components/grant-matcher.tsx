@@ -16,6 +16,8 @@ interface Props {
   initialRegion?: string;
   initialBusinessType?: string;
   maxBankCards?: number;
+  selectedRegion?: string;
+  selectedBusinessType?: string;
 }
 
 const REGION_OPTIONS = [
@@ -32,22 +34,45 @@ const REGION_OPTIONS = [
   '전체',
 ];
 const BUSINESS_OPTIONS = ['음식점업', '도소매업', '서비스업', '전체'];
+const QUICK_TAGS = [
+  { label: '🌟 전체 보기', value: '전체' },
+  { label: '🐣 청년창업자 우대', value: '청년창업자 우대' },
+  { label: '🏪 전통시장·골목상권', value: '전통시장·골목상권' },
+  { label: '💳 대구로페이/정산 연계', value: '대구로페이/정산 연계' },
+  { label: '🏦 iM뱅크 특례보증', value: 'iM뱅크 특례보증' },
+];
 
-export default function GrantMatcher({ initialRegion = '대구 중구', initialBusinessType = '음식점업', maxBankCards = 3 }: Props) {
-  const [region, setRegion] = useState<string>(initialRegion);
-  const [businessType, setBusinessType] = useState<string>(initialBusinessType);
+export default function GrantMatcher({
+  initialRegion = '대구 중구',
+  initialBusinessType = '음식점업',
+  maxBankCards = 3,
+  selectedRegion,
+  selectedBusinessType,
+}: Props) {
+  const [region, setRegion] = useState<string>(selectedRegion ?? initialRegion);
+  const [businessType, setBusinessType] = useState<string>(selectedBusinessType ?? initialBusinessType);
+  const [selectedTag, setSelectedTag] = useState<string>('전체');
   const [aiChatOpen, setAiChatOpen] = useState(false);
   const [aiChatPrompt, setAiChatPrompt] = useState('');
   const [selectedPolicy, setSelectedPolicy] = useState<PolicyDetailModal | null>(null);
+
+  React.useEffect(() => {
+    if (selectedRegion) setRegion(selectedRegion);
+  }, [selectedRegion]);
+
+  React.useEffect(() => {
+    if (selectedBusinessType) setBusinessType(selectedBusinessType);
+  }, [selectedBusinessType]);
 
   const matchedGrants = useMemo(() => {
     return grants.filter((g) => {
       const regionMatch =
         region === '전체' || g.regions.some((r) => r === region || region.includes(r) || r.includes(region) || (r.includes('대구') && region.includes('대구')));
       const bizMatch = businessType === '전체' || g.businessTypes.some((b) => b === businessType || businessType.includes(b));
-      return regionMatch && bizMatch;
+      const tagMatch = selectedTag === '전체' || (Array.isArray(g.tags) && g.tags.includes(selectedTag));
+      return regionMatch && bizMatch && tagMatch;
     });
-  }, [region, businessType]);
+  }, [region, businessType, selectedTag]);
 
   const suggestedCards = useMemo(() => imBankCards.slice(0, maxBankCards), [maxBankCards]);
 
@@ -147,6 +172,26 @@ export default function GrantMatcher({ initialRegion = '대구 중구', initialB
         </label>
       </div>
 
+      <div className="mb-4 flex flex-wrap gap-2">
+        {QUICK_TAGS.map((tag) => {
+          const active = selectedTag === tag.value;
+          return (
+            <button
+              key={tag.value}
+              type="button"
+              onClick={() => setSelectedTag(tag.value)}
+              className={`rounded-full border px-3 py-2 text-sm transition ${
+                active
+                  ? 'border-emerald-600 bg-emerald-600 text-white font-bold shadow-sm'
+                  : 'border-gray-200 bg-white text-gray-600 hover:bg-emerald-50'
+              }`}
+            >
+              {tag.label}
+            </button>
+          );
+        })}
+      </div>
+
       <div className="grid gap-4 md:grid-cols-2">
         <GrantListColumn
           grants={matchedGrants}
@@ -168,6 +213,30 @@ export default function GrantMatcher({ initialRegion = '대구 중구', initialB
               </li>
             ))}
           </ul>
+        </div>
+      </div>
+
+      <div className="mt-6 grid gap-4 md:grid-cols-2">
+        <div className="rounded-2xl border border-emerald-200 bg-white p-4 shadow-sm shadow-emerald-100">
+          <div className="mb-3 flex items-center gap-2 text-emerald-700">
+            <span className="text-xl">📄</span>
+            <span className="text-xs font-semibold uppercase tracking-[0.12em]">필수 서류 가이드</span>
+          </div>
+          <h4 className="text-lg font-extrabold text-emerald-950">처음 신청하시나요? 필수 제출 서류 발급 가이드 (홈택스/정부24)</h4>
+          <p className="mt-2 text-sm text-emerald-800/75">
+            사업자등록증, 부가가치세 과세표준증명원, 신용정보 확인서 등을 홈택스·정부24에서 발급하는 가장 빠른 방법을 정리해보세요.
+          </p>
+        </div>
+
+        <div className="rounded-2xl border border-emerald-200 bg-white p-4 shadow-sm shadow-emerald-100">
+          <div className="mb-3 flex items-center gap-2 text-emerald-700">
+            <span className="text-xl">💡</span>
+            <span className="text-xs font-semibold uppercase tracking-[0.12em]">신청 팁</span>
+          </div>
+          <h4 className="text-lg font-extrabold text-emerald-950">2026 대구시 골목상권 디지털 전환 지원금 신청 팁</h4>
+          <p className="mt-2 text-sm text-emerald-800/75">
+            결제 시스템·배달·POS 연동 내역과 최근 6개월 매출 증빙을 함께 준비하면 심사 통과 가능성이 높아집니다.
+          </p>
         </div>
       </div>
 
@@ -278,6 +347,16 @@ function GrantListColumn({
               <button onClick={() => onOpenDetail(g.title, g.description, region, industry)} className="w-full text-left">
                 <p className="font-extrabold text-emerald-950">{g.title}</p>
                 <p className="mt-1 text-sm text-emerald-600">{g.amount ?? ''}</p>
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {(Array.isArray(g.tags) ? g.tags : []).slice(0, 3).map((tag: string) => (
+                    <span
+                      key={`${g.id}-${tag}`}
+                      className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
                 <p className="mt-2 text-sm text-emerald-800/75 truncate">{g.description}</p>
               </button>
             </li>
