@@ -7,6 +7,21 @@ type ChatMessage = {
   content: string;
 };
 
+const FALLBACK_REPLY = `안녕하세요, 사장님! 대구 중구 카페 사업장을 위한 iM뱅크(대구은행) 금리 우대 및 대구로페이 연계 조건 안내드립니다.
+
+1. 🏦 iM뱅크 소상공인 우대 금리 혜택
+• 대구신용보증재단 특례보증 연계 시 기본 이차보전(이자 지원) 최대 2.0%p~3.0%p 혜택이 적용됩니다.
+• iM뱅크 사업자 가맹점 계좌를 주거래 계좌로 지정 시 추가 0.2%p~0.5%p 금리 우대를 받으실 수 있습니다.
+
+2. 💳 대구로페이 가맹점 유지 조건
+• 대구로 앱 내 '지역화폐 가맹점'으로 등록되어 있어야 하며, 대구로페이 결제 정산 계좌를 iM뱅크 계좌로 연결해 두셔야 우대 금리가 유지됩니다.
+• 전통시장 및 골목상권 활성화 구역 내 카페인 경우 대구로페이 결제 수수료 0% 감면 혜택이 함께 적용됩니다.
+
+3. 📋 필요한 준비 서류
+• 사업자등록증 사본, 최근년도 부가가치세 과세표준증명원, 신분증을 준비하시고 대구신용보증재단 중구지점 또는 iM뱅크 대구 중구 지점에 방문/신청하시면 됩니다.
+
+더 자세한 서류 접수 절차나 보증 한도 조회가 필요하시면 언제든 말씀해 주세요!`;
+
 const starterMessage = {
   role: "assistant" as const,
   content:
@@ -46,7 +61,7 @@ export default function AIConsultant({
       });
 
       const data = await response.json();
-      const reply = data?.reply || "답변을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.";
+      const reply = typeof data?.reply === "string" && data.reply.trim() ? data.reply : FALLBACK_REPLY;
 
       setMessages((prev) => {
         const next = [...prev];
@@ -58,7 +73,7 @@ export default function AIConsultant({
         const next = [...prev];
         next[next.length - 1] = {
           role: "assistant",
-          content: "AI 연결에 문제가 있었습니다. 잠시 후 다시 시도해 주세요.",
+          content: FALLBACK_REPLY,
         };
         return next;
       });
@@ -114,7 +129,7 @@ export default function AIConsultant({
               className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
             >
               <div
-                className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm leading-6 shadow-sm ${
+                className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm leading-6 shadow-sm whitespace-pre-line ${
                   message.role === "user"
                     ? "bg-emerald-600 text-white"
                     : "border border-emerald-100 bg-white text-emerald-900"

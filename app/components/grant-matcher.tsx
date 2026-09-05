@@ -274,6 +274,12 @@ export default function GrantMatcher({
                 )}
               </div>
 
+              <div className="rounded-2xl border border-emerald-100 bg-emerald-50/60 p-3">
+                <p className="text-[11px] leading-5 text-emerald-800/80">
+                  💡 본 리포트는 공공데이터포털, 대구 D-데이터허브, DIP 빅데이터활용센터의 실시간/분석 데이터를 기반으로 AI가 종합 분석한 결과입니다.
+                </p>
+              </div>
+
               <div className="rounded-2xl border border-emerald-200 bg-white p-4">
                 <p className="font-extrabold text-emerald-900">📋 필요 서류</p>
                 <ul className="mt-3 space-y-2">

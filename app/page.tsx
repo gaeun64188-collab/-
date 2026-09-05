@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import AIConsultant from "./components/ai-consultant";
 import GrantMatcher from './components/grant-matcher';
@@ -20,6 +21,27 @@ type MarketMap = Record<string, Record<string, Record<string, MarketStats>>>;
 const districts = ["대구 중구", "대구 북구", "대구 수성구", "대구 달서구", "대구 동구"];
 const industries = ["카페", "패션", "식당", "뷰티", "교육"];
 const revenueRanges = ["1천만 원 이하", "1천만~3천만 원", "3천만~5천만 원", "5천만 원 이상"];
+
+const dataSourceCards = [
+  {
+    icon: "🌐",
+    title: "공공 데이터 포털",
+    description: "전국 소상공인 상권 DB 및 공공 정책자금 데이터 연동",
+    url: "https://www.data.go.kr/",
+  },
+  {
+    icon: "☁️",
+    title: "대구 D-데이터허브",
+    description: "대구로페이 가맹점/결제 현황 및 구·군별 유동인구 데이터 연동",
+    url: "https://data.daegu.go/",
+  },
+  {
+    icon: "🖥️",
+    title: "DIP 빅데이터활용센터",
+    description: "대구 융복합 상권 분석 및 AI 매출 예측 모델 반영",
+    url: "https://www.bigdata.go.kr/",
+  },
+];
 
 const marketData: MarketMap = {
   "대구 중구": {
@@ -221,202 +243,303 @@ export default function Home() {
     setLoginLoadingProvider(null);
   };
 
+  const openExternalLink = (url: string) => {
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
+  const quickActions = [
+    { label: "📍 상권 분석", key: "market" },
+    { label: "💰 지원금 조회", key: "grant" },
+    { label: "🏦 iM 우대금리", key: "finance" },
+    { label: "📄 AI 사업계획서", key: "generator" },
+    { label: "📣 AI 마케팅", key: "ai" },
+  ];
+  const languageOptions = ["KO", "EN", "JP", "ZH"] as const;
+  type Language = (typeof languageOptions)[number];
+
+  const translation: Record<Language, {
+    heroTitle: string;
+    heroSub: string;
+    nav1: string;
+    nav2: string;
+    nav3: string;
+    nav4: string;
+    nav5: string;
+    login: string;
+  }> = {
+    KO: {
+      heroTitle: "더 나은 상권 선택을 시작하세요.",
+      heroSub: "대구시 소상공인과 예비 창업자를 위한 AI 맞춤 상권 분석 및 지원금·iM뱅크 금융 혜택 솔루션",
+      nav1: "지자체 지원금",
+      nav2: "iM뱅크 금융우대",
+      nav3: "대구로페이/상권",
+      nav4: "AI 컨설팅",
+      nav5: "이용안내/가이드",
+      login: "로그인",
+    },
+    EN: {
+      heroTitle: "Start making better commercial area choices.",
+      heroSub: "AI-customized commercial analysis, subsidies, and iM Bank financial solutions for Daegu small business owners.",
+      nav1: "Local Subsidies",
+      nav2: "iM Bank Benefits",
+      nav3: "Daegu Ro Pay/Market",
+      nav4: "AI Consulting",
+      nav5: "User Guide",
+      login: "Login",
+    },
+    JP: {
+      heroTitle: "より 좋은 商圏選択を始めましょう。",
+      heroSub: "大邱市の小規模事業者と創業者のためのAIカスタマイズ商圏分析および助成金・iMバンク金融特典ソリューション",
+      nav1: "自治体助成金",
+      nav2: "iMバンク優遇金融",
+      nav3: "大邱ローペイ/商圏",
+      nav4: "AIコンサルティング",
+      nav5: "ご利用 안내",
+      login: "ログイン",
+    },
+    ZH: {
+      heroTitle: "开始选择更好的商圈。",
+      heroSub: "为大邱市小微企业和创业者提供AI定制商圈分析、补贴及iM Bank金融优惠解决方案",
+      nav1: "地方政府补贴",
+      nav2: "iM Bank 金融优惠",
+      nav3: "大邱Ro Pay/商圈",
+      nav4: "AI 咨询",
+      nav5: "指南/说明",
+      login: "登录",
+    },
+  };
+
+  const [language, setLanguage] = useState<Language>("KO");
+  const safeLanguage = languageOptions.includes(language) ? language : "KO";
+  const t = translation[safeLanguage];
+
+  const languageLabelMap: Record<Language, string> = {
+    KO: "한국어",
+    EN: "English",
+    JP: "日本語",
+    ZH: "中文",
+  };
+
   const heroTitle = isLoggedIn
     ? "김사장님(대구 중구 카페), 반갑습니다!"
-    : "더 나은 상권 선택을 시작하세요.";
+    : t.heroTitle;
 
   const heroSubtitle = isLoggedIn
     ? "사장님 매장에 딱 맞는 지원 정책 3건이 기다리고 있습니다."
-    : "지역, 업종, 매출 조건을 선택해 적합한 상권 전략을 빠르게 검토할 수 있습니다.";
+    : t.heroSub;
+
+  const guideLabel = t.nav5;
+
+  const nextLanguage = () => {
+    const currentIndex = languageOptions.indexOf(safeLanguage);
+    const nextIndex = (currentIndex + 1) % languageOptions.length;
+    setLanguage(languageOptions[nextIndex]);
+  };
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(20,184,166,0.22),_transparent_26%),linear-gradient(180deg,_#f0fdf4_0%,_#ecfdf5_38%,_#f6fff9_100%)] px-4 py-8 text-slate-800 sm:px-6 lg:px-8">
-      <header className="mx-auto mb-6 flex max-w-6xl items-center justify-between gap-4 rounded-[26px] border border-emerald-200 bg-white/85 px-5 py-4 shadow-[0_12px_30px_rgba(16,185,129,0.08)] backdrop-blur-sm">
-        <div className="flex items-center gap-3">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">대구시 소상공인 상권 분석 & 지원금 플랫폼</p>
-          <a
-            href="/generator"
-            className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800 transition hover:bg-emerald-100"
-          >
-            📄 AI 서류/사업계획서 생성
-          </a>
-        </div>
-
-        {!isLoggedIn ? (
-          <button
-            type="button"
-            onClick={() => setIsLoginModalOpen(true)}
-            className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-500"
-          >
-            로그인 / 회원가입
-          </button>
-        ) : (
-          <div className="flex items-center gap-3">
-            <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800">
-              🟢 대구 중구 카페 사장님
-            </span>
-            <div className="flex items-center gap-2 rounded-full border border-emerald-200 bg-white px-3 py-2 shadow-sm">
-              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-green-400 text-xs font-bold text-white">
-                K
+    <main className="min-h-screen bg-[#f0fdf4] text-slate-800">
+      <header className="bg-emerald-600 text-white shadow-[0_16px_32px_rgba(5,150,105,0.18)]">
+        <div className="mx-auto max-w-6xl px-4 py-4 sm:px-6 lg:px-8">
+          <div className="flex max-w-full items-center justify-between gap-2 overflow-x-auto">
+            <div className="flex shrink-0 items-center gap-3 md:gap-5">
+              <div className="flex shrink-0 items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/15 text-base font-extrabold ring-1 ring-white/20">
+                  iM
+                </div>
+                <div className="shrink-0 leading-none">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-emerald-100">소상공인</div>
+                  <div className="mt-0.5 text-lg font-extrabold">플랫폼</div>
+                </div>
               </div>
-              <span className="text-sm font-semibold text-emerald-950">김사장 님</span>
-              <span className="text-lg">🟢</span>
+
+              <Link
+                href="/guide"
+                className="hidden whitespace-nowrap break-keep px-2 py-1 text-xs font-medium text-emerald-50 transition hover:text-white md:inline-flex md:text-sm"
+              >
+                {guideLabel}
+              </Link>
             </div>
-            <button
-              type="button"
-              onClick={() => setIsLoggedIn(false)}
-              className="rounded-xl border border-emerald-200 bg-white px-3 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-50"
-            >
-              로그아웃
-            </button>
+
+            <div className="flex shrink-0 items-center gap-2 md:gap-3">
+              <button
+                type="button"
+                onClick={nextLanguage}
+                className="shrink-0 rounded-full border border-white/20 bg-white/10 px-3 py-2 text-sm font-medium text-white transition hover:bg-white/15"
+              >
+                {languageLabelMap[safeLanguage]} ▾
+              </button>
+
+              {!isLoggedIn ? (
+                <button
+                  type="button"
+                  onClick={() => setIsLoginModalOpen(true)}
+                  className="shrink-0 rounded-full bg-white px-4 py-2 text-xs font-semibold text-emerald-700 shadow-sm transition hover:bg-emerald-50 sm:inline-flex"
+                >
+                  {t.login}
+                </button>
+              ) : (
+                <div className="hidden shrink-0 items-center gap-3 rounded-full border border-white/20 bg-white/10 px-2 py-1 sm:flex">
+                  <span className="rounded-full bg-emerald-500 px-2 py-1 text-[10px] font-bold text-white">K</span>
+                  <span className="text-sm font-medium text-white">김사장님</span>
+                </div>
+              )}
+            </div>
           </div>
-        )}
+        </div>
       </header>
 
-      <div className="mx-auto max-w-6xl">
-        <div className="overflow-hidden rounded-[32px] border border-emerald-200 bg-white/80 shadow-[0_30px_80px_rgba(16,185,129,0.14)] backdrop-blur-sm">
-          <div className="grid gap-0 lg:grid-cols-[1.15fr_0.85fr]">
-            <section className="relative overflow-hidden bg-gradient-to-br from-emerald-700 via-emerald-600 to-green-500 p-8 text-white sm:p-10 lg:p-12">
-              <div className="absolute -right-16 -top-16 h-44 w-44 rounded-full bg-white/10 blur-2xl" />
-              <div className="absolute bottom-0 right-10 h-40 w-40 rounded-full bg-emerald-300/30 blur-3xl" />
-
-              <div className="relative z-10">
-                <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-3 py-1 text-sm font-medium text-emerald-50">
-                  <span className="h-2 w-2 rounded-full bg-emerald-200" />
-                  지역 기반 상권 분석
-                </div>
-
-                <h1 className="max-w-md text-4xl font-bold leading-tight tracking-[-0.04em] sm:text-5xl">
-                  {heroTitle}
-                </h1>
-
-                <p className="mt-4 max-w-lg text-base text-emerald-50/90 sm:text-lg">
-                  {heroSubtitle}
-                </p>
-
-                <div className="mt-8 rounded-3xl border border-white/20 bg-white/10 p-5 shadow-lg shadow-emerald-900/10">
-                  <div className="grid gap-4 sm:grid-cols-3">
-                    <label className="block">
-                      <span className="mb-2 block text-sm font-medium text-emerald-50/90">지역</span>
-                      <select
-                        value={selectedRegion}
-                        onChange={(event) => setSelectedRegion(event.target.value)}
-                        className="w-full rounded-2xl border border-white/20 bg-white/10 px-3 py-3 text-base text-white outline-none ring-0 placeholder:text-emerald-100/80 focus:border-white/40"
-                      >
-                        {districts.map((district) => (
-                          <option key={district} value={district} className="text-slate-800">
-                            {district}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-
-                    <label className="block">
-                      <span className="mb-2 block text-sm font-medium text-emerald-50/90">업종</span>
-                      <select
-                        value={selectedIndustry}
-                        onChange={(event) => setSelectedIndustry(event.target.value)}
-                        className="w-full rounded-2xl border border-white/20 bg-white/10 px-3 py-3 text-base text-white outline-none ring-0 placeholder:text-emerald-100/80 focus:border-white/40"
-                      >
-                        {industries.map((industry) => (
-                          <option key={industry} value={industry} className="text-slate-800">
-                            {industry}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-
-                    <label className="block">
-                      <span className="mb-2 block text-sm font-medium text-emerald-50/90">매출</span>
-                      <select
-                        value={selectedRevenue}
-                        onChange={(event) => setSelectedRevenue(event.target.value)}
-                        className="w-full rounded-2xl border border-white/20 bg-white/10 px-3 py-3 text-base text-white outline-none ring-0 placeholder:text-emerald-100/80 focus:border-white/40"
-                      >
-                        {revenueRanges.map((range) => (
-                          <option key={range} value={range} className="text-slate-800">
-                            {range}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                  </div>
-
-                  <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
-                    <button
-                      type="button"
-                      onClick={() => setIsAiOpen(true)}
-                      className="inline-flex items-center justify-center rounded-full bg-white px-5 py-3 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-50"
-                    >
-                      AI 상담사와 대화하기
-                    </button>
-                  </div>
-                </div>
+      <div className="mx-auto max-w-6xl px-4 pb-10 pt-6 sm:px-6 lg:px-8">
+        <section className="rounded-[32px] bg-white p-6 shadow-[0_20px_50px_rgba(15,23,42,0.08)] sm:p-8 lg:p-10">
+          <div className="grid gap-8 lg:grid-cols-[1.35fr_0.65fr] lg:items-center">
+            <div>
+              <div className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-emerald-700 ring-1 ring-emerald-100">
+                <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                AI 맞춤 상권 분석
               </div>
-            </section>
 
-            <section className="bg-gradient-to-br from-emerald-50 via-green-50 to-lime-50 p-8 sm:p-10 lg:p-12">
+              <h1 className="mt-4 max-w-xl text-3xl font-bold leading-tight text-gray-900 md:text-4xl">
+                {heroTitle}
+              </h1>
+
+              <p className="mt-3 max-w-2xl text-base text-slate-600 md:text-lg">
+                {heroSubtitle}
+              </p>
+
+              <div className="mt-8 grid gap-4 sm:grid-cols-3">
+                <label className="block">
+                  <span className="mb-2 block text-sm font-semibold text-slate-600">지역</span>
+                  <select
+                    value={selectedRegion}
+                    onChange={(event) => setSelectedRegion(event.target.value)}
+                    className="w-full rounded-2xl border border-emerald-100 bg-emerald-50 px-3 py-3 text-base text-slate-800 outline-none ring-0 transition focus:border-emerald-300 focus:bg-white"
+                  >
+                    {districts.map((district) => (
+                      <option key={district} value={district}>
+                        {district}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="block">
+                  <span className="mb-2 block text-sm font-semibold text-slate-600">업종</span>
+                  <select
+                    value={selectedIndustry}
+                    onChange={(event) => setSelectedIndustry(event.target.value)}
+                    className="w-full rounded-2xl border border-emerald-100 bg-emerald-50 px-3 py-3 text-base text-slate-800 outline-none ring-0 transition focus:border-emerald-300 focus:bg-white"
+                  >
+                    {industries.map((industry) => (
+                      <option key={industry} value={industry}>
+                        {industry}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="block">
+                  <span className="mb-2 block text-sm font-semibold text-slate-600">매출</span>
+                  <select
+                    value={selectedRevenue}
+                    onChange={(event) => setSelectedRevenue(event.target.value)}
+                    className="w-full rounded-2xl border border-emerald-100 bg-emerald-50 px-3 py-3 text-base text-slate-800 outline-none ring-0 transition focus:border-emerald-300 focus:bg-white"
+                  >
+                    {revenueRanges.map((range) => (
+                      <option key={range} value={range}>
+                        {range}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+
+              <div className="mt-6 flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsAiOpen(true)}
+                  className="inline-flex items-center justify-center rounded-full bg-emerald-600 px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-500"
+                >
+                  AI 상담사와 대화하기
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsLoginModalOpen(true)}
+                  className="inline-flex items-center justify-center rounded-full border border-emerald-200 bg-emerald-50 px-5 py-3 text-sm font-bold text-emerald-800 transition hover:bg-emerald-100"
+                >
+                  소셜 로그인 / 회원가입
+                </button>
+              </div>
+            </div>
+
+            <div className="rounded-[28px] border border-emerald-100 bg-gradient-to-br from-emerald-50 via-white to-green-50 p-5 shadow-[0_18px_40px_rgba(16,185,129,0.08)]">
               <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium uppercase tracking-[0.12em] text-emerald-700">
-                    Today
-                  </p>
-                  <h2 className="mt-2 text-2xl font-bold text-emerald-950">상권 현황</h2>
+                <p className="text-sm font-semibold text-emerald-800">이달 실적</p>
+                <span className="rounded-full bg-emerald-600 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-white">
+                  Live
+                </span>
+              </div>
+
+              <div className="mt-5 rounded-2xl border border-emerald-100 bg-white p-4 shadow-sm">
+                <div className="flex items-center justify-between text-sm text-slate-600">
+                  <span>대구로페이 결제 비중</span>
+                  <span className="font-bold text-emerald-700">28%</span>
                 </div>
-                <div className="rounded-full border border-emerald-200 bg-white/80 px-3 py-1 text-sm font-medium text-emerald-700 shadow-sm shadow-emerald-100">
-                  {currentData.trafficLabel}
+                <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-emerald-100">
+                  <div className="h-full w-[28%] rounded-full bg-gradient-to-r from-emerald-500 to-green-400" />
                 </div>
               </div>
 
-              <div className="mt-8 space-y-4">
-                <div className="rounded-3xl border border-emerald-100 bg-white/90 p-5 shadow-[0_14px_30px_rgba(16,185,129,0.08)]">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-emerald-800/70">유동인구</span>
-                    <span className="text-sm font-semibold text-emerald-700">{currentData.trafficLabel}</span>
-                  </div>
-                  <div className="mt-3 flex items-end gap-2">
-                    <span className="text-3xl font-bold text-emerald-950">{currentData.traffic}</span>
-                    <span className="pb-1 text-sm text-emerald-800/70">명/일</span>
-                  </div>
-                  <div className="mt-4 h-2.5 overflow-hidden rounded-full bg-emerald-100">
-                    <div
-                      className="h-full rounded-full bg-gradient-to-r from-emerald-500 via-green-500 to-lime-400"
-                      style={{ width: currentData.score }}
-                    />
-                  </div>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+                <div className="rounded-2xl border border-emerald-100 bg-white p-4 shadow-sm">
+                  <div className="text-xs font-medium uppercase tracking-[0.12em] text-slate-500">누적 매출</div>
+                  <div className="mt-2 text-2xl font-extrabold text-emerald-950">1,420만</div>
+                  <div className="mt-1 text-sm font-medium text-emerald-700">+8.5% 전월 대비</div>
                 </div>
-
-                <div className="rounded-3xl border border-emerald-100 bg-white/90 p-5 shadow-[0_14px_30px_rgba(16,185,129,0.08)]">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-emerald-800/70">평균 매출</span>
-                    <span className="text-sm font-semibold text-emerald-700">{currentData.salesLabel}</span>
-                  </div>
-                  <div className="mt-3 flex items-end gap-2">
-                    <span className="text-3xl font-bold text-emerald-950">{currentData.sales}</span>
-                    <span className="pb-1 text-sm text-emerald-800/70">만 원</span>
-                  </div>
-                  <div className="mt-4 flex items-center gap-2 text-sm text-emerald-800/75">
-                    <span className="inline-block h-2.5 w-2.5 rounded-full bg-emerald-500" />
-                    {currentData.change}
-                  </div>
-                </div>
-
-                <div className="rounded-3xl bg-gradient-to-br from-emerald-600 via-green-500 to-lime-500 p-5 text-white shadow-[0_18px_40px_rgba(34,197,94,0.24)]">
-                  <p className="text-sm text-emerald-50/80">핵심 인사이트</p>
-                  <div className="mt-3 flex items-center justify-between gap-4">
-                    <div>
-                      <p className="text-2xl font-bold">{selectedRegion}</p>
-                      <p className="mt-1 text-sm text-emerald-50/90">{selectedIndustry} 업종 기준 {currentData.insight}</p>
-                    </div>
-                    <div className="rounded-2xl border border-white/20 bg-white/10 px-3 py-2 text-right backdrop-blur-sm">
-                      <div className="text-xs text-emerald-50/80">예상 점유율</div>
-                      <div className="text-xl font-bold">{currentData.score}</div>
-                    </div>
-                  </div>
+                <div className="rounded-2xl border border-emerald-100 bg-white p-4 shadow-sm">
+                  <div className="text-xs font-medium uppercase tracking-[0.12em] text-slate-500">우대금리</div>
+                  <div className="mt-2 text-2xl font-extrabold text-emerald-950">0.5%p</div>
+                  <div className="mt-1 text-sm font-medium text-emerald-700">월 12.5만 절감</div>
                 </div>
               </div>
-            </section>
+
+              <div className="mt-4 rounded-[22px] bg-emerald-600 p-4 text-white shadow-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium uppercase tracking-[0.12em] text-emerald-100">예상 적합도</span>
+                  <span className="text-lg font-bold">{currentData.score}</span>
+                </div>
+                <div className="mt-3 text-sm text-emerald-50">
+                  {selectedRegion} · {selectedIndustry} 업종에 가장 적합한 금융/지원 조건을 선별 중입니다.
+                </div>
+              </div>
+            </div>
           </div>
+        </section>
+
+        <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          {quickActions.map((action) => (
+            <button
+              key={action.key}
+              type="button"
+              onClick={() => {
+                if (action.key === "generator") {
+                  window.location.href = "/generator";
+                  return;
+                }
+                if (action.key === "ai") {
+                  setIsAiOpen(true);
+                  return;
+                }
+                if (action.key === "market") {
+                  window.scrollTo({ top: document.body.scrollHeight * 0.2, behavior: "smooth" });
+                  return;
+                }
+                setIsAiOpen(true);
+              }}
+              className="rounded-[22px] border border-emerald-200 bg-white px-4 py-4 text-left shadow-[0_10px_28px_rgba(16,185,129,0.06)] transition hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-[0_14px_28px_rgba(16,185,129,0.12)]"
+            >
+              <div className="text-lg">{action.label.split(" ")[0]}</div>
+              <div className="mt-2 text-sm font-semibold text-slate-700">{action.label.replace(/^\S+\s/, "")}</div>
+            </button>
+          ))}
         </div>
       </div>
 
@@ -428,6 +551,35 @@ export default function Home() {
           selectedBusinessType={selectedIndustry}
         />
       </div>
+
+      <section className="mx-auto mt-8 max-w-6xl rounded-[28px] border border-emerald-200 bg-white/80 p-6 shadow-[0_18px_40px_rgba(16,185,129,0.06)] backdrop-blur-sm">
+        <div className="flex flex-col gap-2 text-center sm:text-left">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">공공 데이터 활용 및 데이터 출처 안내</p>
+          <h3 className="text-2xl font-extrabold tracking-tight text-emerald-950">
+            AI 상권 분석은 실시간 공공 데이터와 정책 정보를 기반으로 생성됩니다.
+          </h3>
+        </div>
+
+        <div className="mt-6 grid gap-4 md:grid-cols-3">
+          {dataSourceCards.map((card) => (
+            <button
+              key={card.title}
+              type="button"
+              onClick={() => openExternalLink(card.url)}
+              className="group rounded-[24px] border border-emerald-200 bg-gradient-to-br from-white to-emerald-50 p-5 text-left shadow-sm shadow-emerald-100 transition hover:-translate-y-0.5 hover:border-emerald-300 hover:bg-emerald-50"
+            >
+              <div className="mb-3 inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-100 text-2xl shadow-sm">
+                {card.icon}
+              </div>
+              <p className="text-base font-extrabold text-emerald-950">{card.title}</p>
+              <p className="mt-2 text-sm leading-6 text-slate-600">{card.description}</p>
+              <span className="mt-4 inline-flex items-center text-sm font-semibold text-emerald-700">
+                데이터 보기 →
+              </span>
+            </button>
+          ))}
+        </div>
+      </section>
 
       {isLoginModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm">
