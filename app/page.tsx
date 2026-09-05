@@ -615,9 +615,9 @@ export default function Home() {
   };
 
   return (
-    <main className="min-h-screen bg-[#f0fdf4] text-slate-800">
+    <main className="min-h-screen bg-[#edf8ef] text-slate-800">
       <header className="bg-emerald-600 text-white shadow-[0_16px_32px_rgba(5,150,105,0.18)]">
-        <div className="mx-auto max-w-6xl px-4 py-4 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-[1180px] px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex max-w-full items-center justify-between gap-2 overflow-x-auto">
             <div className="flex shrink-0 items-center gap-3 md:gap-5">
               <div className="flex shrink-0 items-center gap-3">
@@ -675,8 +675,8 @@ export default function Home() {
         </div>
       </header>
 
-      <div className="mx-auto max-w-6xl px-4 pb-10 pt-6 sm:px-6 lg:px-8">
-        <section className="relative mx-auto my-6 max-w-6xl overflow-hidden rounded-3xl bg-white p-8 shadow-md md:p-12">
+      <div className="mx-auto max-w-[1180px] px-4 pb-10 pt-6 sm:px-6 lg:px-8">
+        <section className="relative mx-auto my-6 overflow-hidden rounded-[28px] bg-white p-8 shadow-[0_12px_28px_rgba(13,148,136,0.08)] md:p-12">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(16,185,129,0.10),_transparent_30%)]" />
           <div className="relative">
             <div className="transition-all duration-700 ease-in-out">
@@ -745,8 +745,24 @@ export default function Home() {
           </div>
         </section>
 
-        <section className="rounded-[32px] bg-white p-6 shadow-[0_20px_50px_rgba(15,23,42,0.08)] sm:p-8 lg:p-10">
-          <div className="grid gap-8 lg:grid-cols-[1.35fr_0.65fr] lg:items-center">
+        <div className="mx-auto my-3 max-w-6xl rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-2 text-sm font-medium text-slate-700">
+              <span aria-hidden="true">🚨</span>
+              <span className="whitespace-nowrap font-semibold text-emerald-800">[실시간 정책 알림]</span>
+              <span className="truncate">"대구 중구 소상공인 경영안정자금 3차 접수 마감까지 D-3!"</span>
+            </div>
+            <button
+              type="button"
+              className="shrink-0 text-xs font-bold text-emerald-700 transition hover:text-emerald-800"
+            >
+              [지금 바로 신청하기 &gt;]
+            </button>
+          </div>
+        </div>
+
+        <section className="rounded-[30px] bg-white p-6 shadow-[0_20px_50px_rgba(15,23,42,0.08)] sm:p-8 lg:p-10">
+          <div className="grid gap-8 lg:grid-cols-[1.45fr_0.55fr] lg:items-center">
             <div>
               <div className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-emerald-700 ring-1 ring-emerald-100">
                 <span className="h-2 w-2 rounded-full bg-emerald-500" />
@@ -896,7 +912,7 @@ export default function Home() {
         </div>
       </div>
 
-      <div className="mx-auto my-8 max-w-6xl px-4">
+      <div className="mx-auto my-8 max-w-[1180px] px-4">
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2 rounded-3xl border border-gray-100 bg-white p-6 shadow-sm">
             <div className="mb-5 flex items-center justify-between border-b border-gray-100 pb-3">
@@ -961,7 +977,7 @@ export default function Home() {
         </div>
       </div>
 
-      <section className="mx-auto mt-8 max-w-6xl rounded-[28px] border border-emerald-200 bg-white/80 p-6 shadow-[0_18px_40px_rgba(16,185,129,0.06)] backdrop-blur-sm">
+      <section className="mx-auto mt-8 max-w-[1180px] rounded-[28px] border border-emerald-200 bg-white/80 p-6 shadow-[0_18px_40px_rgba(16,185,129,0.06)] backdrop-blur-sm">
         <div className="flex flex-col gap-2 text-center sm:text-left">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">공공 데이터 활용 및 데이터 출처 안내</p>
           <h3 className="text-2xl font-extrabold tracking-tight text-emerald-950">
@@ -1010,7 +1026,7 @@ export default function Home() {
 
       {isMarketAnalysisOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/45 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-6xl overflow-hidden rounded-[32px] border border-emerald-200 bg-white shadow-[0_30px_80px_rgba(15,118,110,0.2)]">
+          <div className="w-full max-w-[1180px] overflow-hidden rounded-[32px] border border-emerald-200 bg-white shadow-[0_30px_80px_rgba(15,118,110,0.2)]">
             <div className="flex items-center justify-between border-b border-emerald-100 bg-emerald-600 px-5 py-4 text-white sm:px-6">
               <div>
                 <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-100">Daegu City</div>
