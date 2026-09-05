@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import AIConsultant from "../components/ai-consultant";
+import { useLanguage } from "../context/LanguageContext";
 
 const summaryCards = [
   {
@@ -33,7 +34,21 @@ const summaryCards = [
 const weeklyBars = [42, 58, 49, 68, 72, 81, 90];
 
 export default function DashboardPage() {
+  const { lang, setLang, t } = useLanguage();
   const [isAiOpen, setIsAiOpen] = useState(false);
+  const languageOptions = ["KO", "EN", "JP", "ZH"] as const;
+  const languageLabelMap = {
+    KO: "한국어",
+    EN: "English",
+    JP: "日本語",
+    ZH: "中文",
+  } as const;
+
+  const nextLanguage = () => {
+    const currentIndex = languageOptions.indexOf(lang);
+    const nextIndex = (currentIndex + 1) % languageOptions.length;
+    setLang(languageOptions[nextIndex]);
+  };
 
   const handleConsultRequest = () => {
     setIsAiOpen(true);
@@ -48,18 +63,22 @@ export default function DashboardPage() {
       <header className="mx-auto mb-6 flex max-w-6xl items-center justify-between gap-4 rounded-[28px] border border-emerald-200 bg-white/85 px-5 py-4 shadow-[0_12px_30px_rgba(16,185,129,0.08)] backdrop-blur-sm">
         <div className="flex items-center gap-3">
           <a href="/" className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800 transition hover:bg-emerald-100">
-            ← 홈으로
+            ← {t.home}
           </a>
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">
-            대구로페이 x iM뱅크 통합 대시보드
-          </p>
+          <button
+            type="button"
+            onClick={nextLanguage}
+            className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800 transition hover:bg-emerald-100"
+          >
+            {languageLabelMap[lang]} ▾
+          </button>
         </div>
 
         <a
           href="/generator"
           className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800 transition hover:bg-emerald-100"
         >
-          📄 AI 서류/사업계획서 생성
+          {t.dashboardGenerate}
         </a>
       </header>
 
@@ -71,7 +90,7 @@ export default function DashboardPage() {
                 정산 & 금융 현황
               </p>
               <h1 className="mt-2 text-3xl font-bold tracking-[-0.04em] text-emerald-950 sm:text-4xl">
-                대구로페이 x iM뱅크 통합 매출 & 금융 정산 다이어리
+                {t.dashboardTitle}
               </h1>
             </div>
             <div className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700">
@@ -80,7 +99,7 @@ export default function DashboardPage() {
           </div>
 
           <p className="mt-5 max-w-3xl text-base text-slate-600 sm:text-lg">
-            김사장님(대구 중구 카페)의 이번 달 실시간 정산 현황과 금융 혜택 한눈에 보기
+            {t.dashboardSubtitle}
           </p>
 
           <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">

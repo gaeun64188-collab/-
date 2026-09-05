@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import AIConsultant from "./components/ai-consultant";
 import GrantMatcher from './components/grant-matcher';
+import { useLanguage } from "./context/LanguageContext";
 
 type MarketStats = {
   traffic: string;
@@ -217,6 +218,45 @@ const defaultStats: MarketStats = {
   district: "핵심 상권",
 };
 
+const noticeItems = {
+  notice: [
+    { title: "2026년 대구광역시 소상공인 경영안정자금 3차 접수 안내", date: "2026.09.05" },
+    { title: "iM뱅크 대구로페이 가맹점 우대 금리 혜택 개정 안내", date: "2026.09.02" },
+    { title: "소상공인 AI 사업계획서 자동 생성 서비스 오픈", date: "2026.09.01" },
+    { title: "대구 중구·수성구 골목상권 활성화 지원사업 공모", date: "2026.08.28" },
+  ],
+  event: [
+    { title: "iM뱅크 대구로페이 9월 특별 이벤트 오픈", date: "2026.09.06" },
+    { title: "소상공인 금융 리모델링 무료 컨설팅 세미나", date: "2026.09.03" },
+    { title: "AI 사업계획서 체험 이벤트 참여자 모집", date: "2026.08.30" },
+    { title: "대구 전통시장 디지털 전환 페스티벌", date: "2026.08.24" },
+  ],
+} as const;
+
+const appLinks = [
+  {
+    name: "iM뱅크",
+    label: "iM뱅크",
+    accent: "bg-emerald-500",
+    icon: "iM",
+    url: "https://www.imbank.co.kr/",
+  },
+  {
+    name: "iM샵",
+    label: "iM샵 (대구로페이)",
+    accent: "bg-lime-400",
+    icon: "#",
+    url: "https://www.daegu.go/",
+  },
+  {
+    name: "iM뱅크 기업",
+    label: "iM뱅크 기업",
+    accent: "bg-slate-800",
+    icon: "iM",
+    url: "https://www.imbank.co.kr/",
+  },
+] as const;
+
 export default function Home() {
   const [selectedRegion, setSelectedRegion] = useState("대구 중구");
   const [selectedIndustry, setSelectedIndustry] = useState("카페");
@@ -225,6 +265,94 @@ export default function Home() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [loginLoadingProvider, setLoginLoadingProvider] = useState<string | null>(null);
+  const [activeNoticeTab, setActiveNoticeTab] = useState<"notice" | "event">("notice");
+  const [isMarketAnalysisOpen, setIsMarketAnalysisOpen] = useState(false);
+  const [mapDistrict, setMapDistrict] = useState("대구 중구");
+  const [mapIndustry, setMapIndustry] = useState("카페");
+  const [mapMarker, setMapMarker] = useState<{ lat: number; lng: number; label: string }>({
+    lat: 35.8714,
+    lng: 128.6014,
+    label: "대구시청",
+  });
+  const [reportLocationName, setReportLocationName] = useState("대구 중구 동인동");
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+
+  const mapContainerRef = useRef<HTMLDivElement | null>(null);
+  const mapInstanceRef = useRef<any | null>(null);
+  const mapMarkerLayerRef = useRef<any | null>(null);
+  const mapCircleLayerRef = useRef<any | null>(null);
+
+  useEffect(() => {
+    if (mapInstanceRef.current) {
+      setTimeout(() => {
+        mapInstanceRef.current.invalidateSize();
+      }, 200);
+    }
+  }, [isMarketAnalysisOpen]);
+
+  const mapIndustryOptions = ["카페", "음식점", "의류", "뷰티", "교육"];
+  const mapDistrictOptions = ["대구 중구", "대구 북구", "대구 수성구", "대구 달서구", "대구 동구"];
+
+  const districtCenterMap: Record<string, { lat: number; lng: number; dong: string }> = {
+    "대구 중구": { lat: 35.8684, lng: 128.5945, dong: "동인동" },
+    "대구 북구": { lat: 35.8855, lng: 128.5886, dong: "칠성동" },
+    "대구 수성구": { lat: 35.8367, lng: 128.6617, dong: "범어동" },
+    "대구 달서구": { lat: 35.8298, lng: 128.5322, dong: "두류동" },
+    "대구 동구": { lat: 35.8866, lng: 128.6358, dong: "신암동" },
+  };
+
+  const districtAiMetrics: Record<string, { score: string; traffic: string; pay: string; insight: string }> = {
+    "대구 중구": {
+      score: "88점 (상위 12%)",
+      traffic: "연령대 20대~40대, 점심·저녁시간대 집중",
+      pay: "높음 (월평균 1,420건)",
+      insight: "도심 접근성과 근무인구가 높아 카페·식당형 업종이 유리합니다.",
+    },
+    "대구 북구": {
+      score: "84점 (상위 18%)",
+      traffic: "가족·주거 밀집 지역, 주말 방문객 증가",
+      pay: "중상 (월평균 1,120건)",
+      insight: "생활밀착형 업종과 프랜차이즈 확장에 우수한 입지입니다.",
+    },
+    "대구 수성구": {
+      score: "91점 (상위 9%)",
+      traffic: "직장인·가족 수요가 안정적, 저녁 유동인구 높음",
+      pay: "매우 높음 (월평균 1,680건)",
+      insight: "프리미엄 소비층이 강해 서비스형 업종 성장이 기대됩니다.",
+    },
+    "대구 달서구": {
+      score: "86점 (상위 15%)",
+      traffic: "주거 지구 중심, 평일 점심·야간 피크",
+      pay: "높음 (월평균 1,340건)",
+      insight: "주민 밀집도가 높아 편의형·브랜딩형 매장에 적합합니다.",
+    },
+    "대구 동구": {
+      score: "82점 (상위 20%)",
+      traffic: "주간 직장인 유동 증가, 저녁 식사 수요 유지",
+      pay: "중상 (월평균 1,090건)",
+      insight: "접근성은 좋지만 추가 브랜드 인지가 필요한 지역입니다.",
+    },
+  };
+
+  const currentMapMetrics = districtAiMetrics[mapDistrict] ?? districtAiMetrics["대구 중구"];
+
+  const getDongNameFromCoordinates = (lat: number, lng: number) => {
+    if (lat > 35.82 && lat < 35.86 && lng > 128.49 && lng < 128.57) return "대구 달서구 두류동";
+    if (lat > 35.83 && lat < 35.88 && lng > 128.61 && lng < 128.68) return "대구 수성구 범어동";
+    if (lat > 35.87 && lat < 35.91 && lng > 128.58 && lng < 128.64) return "대구 중구 동인동";
+    if (lat > 35.88 && lat < 35.93 && lng > 128.56 && lng < 128.60) return "대구 북구 칠성동";
+    if (lat > 35.86 && lat < 35.90 && lng > 128.62 && lng < 128.66) return "대구 동구 신암동";
+    return "대구시청 인근";
+  };
+
+  const resolveDistrictFromCoordinates = (lat: number, lng: number) => {
+    if (lat > 35.82 && lat < 35.87 && lng > 128.49 && lng < 128.58) return "대구 달서구";
+    if (lat > 35.82 && lat < 35.89 && lng > 128.60 && lng < 128.69) return "대구 수성구";
+    if (lat > 35.86 && lat < 35.90 && lng > 128.58 && lng < 128.64) return "대구 중구";
+    if (lat > 35.88 && lat < 35.93 && lng > 128.56 && lng < 128.61) return "대구 북구";
+    if (lat > 35.87 && lat < 35.90 && lng > 128.62 && lng < 128.67) return "대구 동구";
+    return "대구 중구";
+  };
 
   const currentData = useMemo(() => {
     const regionData = marketData[selectedRegion] ?? marketData["대구 중구"];
@@ -243,97 +371,247 @@ export default function Home() {
     setLoginLoadingProvider(null);
   };
 
+  const handleLogout = () => {
+    setIsLoggedIn(false);
+  };
+
   const openExternalLink = (url: string) => {
     window.open(url, "_blank", "noopener,noreferrer");
   };
 
-  const quickActions = [
-    { label: "📍 상권 분석", key: "market" },
-    { label: "💰 지원금 조회", key: "grant" },
-    { label: "🏦 iM 우대금리", key: "finance" },
-    { label: "📄 AI 사업계획서", key: "generator" },
-    { label: "📣 AI 마케팅", key: "ai" },
-  ];
-  const languageOptions = ["KO", "EN", "JP", "ZH"] as const;
-  type Language = (typeof languageOptions)[number];
+  const updateMapPin = (lat: number, lng: number, label: string, districtName: string) => {
+    setMapDistrict(districtName);
+    setMapMarker({ lat, lng, label });
+    setReportLocationName(getDongNameFromCoordinates(lat, lng));
 
-  const translation: Record<Language, {
-    heroTitle: string;
-    heroSub: string;
-    nav1: string;
-    nav2: string;
-    nav3: string;
-    nav4: string;
-    nav5: string;
-    login: string;
-  }> = {
-    KO: {
-      heroTitle: "더 나은 상권 선택을 시작하세요.",
-      heroSub: "대구시 소상공인과 예비 창업자를 위한 AI 맞춤 상권 분석 및 지원금·iM뱅크 금융 혜택 솔루션",
-      nav1: "지자체 지원금",
-      nav2: "iM뱅크 금융우대",
-      nav3: "대구로페이/상권",
-      nav4: "AI 컨설팅",
-      nav5: "이용안내/가이드",
-      login: "로그인",
-    },
-    EN: {
-      heroTitle: "Start making better commercial area choices.",
-      heroSub: "AI-customized commercial analysis, subsidies, and iM Bank financial solutions for Daegu small business owners.",
-      nav1: "Local Subsidies",
-      nav2: "iM Bank Benefits",
-      nav3: "Daegu Ro Pay/Market",
-      nav4: "AI Consulting",
-      nav5: "User Guide",
-      login: "Login",
-    },
-    JP: {
-      heroTitle: "より 좋은 商圏選択を始めましょう。",
-      heroSub: "大邱市の小規模事業者と創業者のためのAIカスタマイズ商圏分析および助成金・iMバンク金融特典ソリューション",
-      nav1: "自治体助成金",
-      nav2: "iMバンク優遇金融",
-      nav3: "大邱ローペイ/商圏",
-      nav4: "AIコンサルティング",
-      nav5: "ご利用 안내",
-      login: "ログイン",
-    },
-    ZH: {
-      heroTitle: "开始选择更好的商圈。",
-      heroSub: "为大邱市小微企业和创业者提供AI定制商圈分析、补贴及iM Bank金融优惠解决方案",
-      nav1: "地方政府补贴",
-      nav2: "iM Bank 金融优惠",
-      nav3: "大邱Ro Pay/商圈",
-      nav4: "AI 咨询",
-      nav5: "指南/说明",
-      login: "登录",
-    },
+    if (typeof window === "undefined" || !(window as any).L || !mapInstanceRef.current) {
+      return;
+    }
+
+    const L = (window as any).L;
+    if (mapMarkerLayerRef.current) {
+      mapInstanceRef.current.removeLayer(mapMarkerLayerRef.current);
+    }
+    if (mapCircleLayerRef.current) {
+      mapInstanceRef.current.removeLayer(mapCircleLayerRef.current);
+    }
+
+    const pinIcon = L.divIcon({
+      className: "",
+      html: `
+        <div style="display:flex; align-items:center; justify-content:center; width:32px; height:32px; border-radius:9999px; border:2px solid rgba(255,255,255,0.95); background:rgba(16,185,129,0.18); box-shadow:0 10px 20px rgba(16,185,129,0.32); font-size:22px; line-height:1;">📍</div>
+      `,
+      iconSize: [32, 32],
+      iconAnchor: [16, 32],
+    });
+
+    mapMarkerLayerRef.current = L.marker([lat, lng], { icon: pinIcon }).addTo(mapInstanceRef.current);
+    mapCircleLayerRef.current = L.circle([lat, lng], {
+      radius: 300,
+      color: "#10b981",
+      fillColor: "#34d399",
+      fillOpacity: 0.2,
+      weight: 2,
+    }).addTo(mapInstanceRef.current);
+
+    mapInstanceRef.current.flyTo([lat, lng], 12.6, { duration: 0.8 });
   };
 
-  const [language, setLanguage] = useState<Language>("KO");
-  const safeLanguage = languageOptions.includes(language) ? language : "KO";
-  const t = translation[safeLanguage];
+  const handleGenerateReport = () => {
+    const nextLabel = reportLocationName || getDongNameFromCoordinates(mapMarker.lat, mapMarker.lng);
+    setReportLocationName(nextLabel);
+    setIsReportModalOpen(true);
+  };
 
-  const languageLabelMap: Record<Language, string> = {
+  useEffect(() => {
+    if (!isMarketAnalysisOpen || typeof window === "undefined") {
+      return;
+    }
+
+    const L = (window as any).L;
+    if (!L) {
+      const styleLink = document.createElement("link");
+      styleLink.rel = "stylesheet";
+      styleLink.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+      styleLink.dataset.leafletStyle = "true";
+      document.head.appendChild(styleLink);
+
+      const iconUrl = "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png";
+      const shadowUrl = "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png";
+      (window as any).L.Icon.Default.mergeOptions({
+        iconUrl,
+        shadowUrl,
+        iconRetinaUrl: iconUrl,
+      });
+
+      const script = document.createElement("script");
+      script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+      script.async = true;
+      script.dataset.leafletScript = "true";
+      script.onload = () => {
+        const Leaflet = (window as any).L;
+        if (!mapContainerRef.current || mapInstanceRef.current || !Leaflet) return;
+        const map = Leaflet.map(mapContainerRef.current, {
+          center: [35.8714, 128.6014],
+          zoom: 12,
+          maxBounds: [
+            [35.66, 128.36],
+            [36.05, 128.9],
+          ],
+          maxBoundsViscosity: 1.0,
+          zoomControl: true,
+          attributionControl: true,
+        });
+
+        Leaflet.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          maxZoom: 18,
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        }).addTo(map);
+
+        mapInstanceRef.current = map;
+        const defaultCenter = districtCenterMap[mapDistrict] ?? districtCenterMap["대구 중구"];
+        updateMapPin(defaultCenter.lat, defaultCenter.lng, "대구시청", mapDistrict);
+
+        map.on("click", (event: any) => {
+          const lat = event.latlng.lat;
+          const lng = event.latlng.lng;
+          const districtName = resolveDistrictFromCoordinates(lat, lng);
+          const nextLabel = getDongNameFromCoordinates(lat, lng);
+          updateMapPin(lat, lng, nextLabel, districtName);
+        });
+      };
+      document.body.appendChild(script);
+      return () => {
+        setTimeout(() => {
+          script.remove();
+          styleLink.remove();
+        }, 0);
+      };
+    }
+
+    if (!mapContainerRef.current || mapInstanceRef.current) {
+      return;
+    }
+
+    const map = L.map(mapContainerRef.current, {
+      center: [35.8714, 128.6014],
+      zoom: 12,
+      maxBounds: [
+        [35.66, 128.36],
+        [36.05, 128.9],
+      ],
+      maxBoundsViscosity: 1.0,
+      zoomControl: true,
+      attributionControl: true,
+      scrollWheelZoom: true,
+    });
+
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 18,
+      minZoom: 9,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      noWrap: true,
+    }).addTo(map);
+
+    mapInstanceRef.current = map;
+    const defaultCenter = districtCenterMap[mapDistrict] ?? districtCenterMap["대구 중구"];
+    updateMapPin(defaultCenter.lat, defaultCenter.lng, "대구시청", mapDistrict);
+
+    map.on("click", (event: any) => {
+      const lat = event.latlng.lat;
+      const lng = event.latlng.lng;
+      const districtName = resolveDistrictFromCoordinates(lat, lng);
+      const nextLabel = getDongNameFromCoordinates(lat, lng);
+      updateMapPin(lat, lng, nextLabel, districtName);
+    });
+
+    return () => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+      }
+      mapMarkerLayerRef.current = null;
+      mapCircleLayerRef.current = null;
+    };
+  }, [isMarketAnalysisOpen]);
+
+  useEffect(() => {
+    if (!isMarketAnalysisOpen || !mapInstanceRef.current || typeof window === "undefined") {
+      return;
+    }
+
+    const target = districtCenterMap[mapDistrict] ?? districtCenterMap["대구 중구"];
+    updateMapPin(target.lat, target.lng, `${mapDistrict} ${target.dong}`, mapDistrict);
+  }, [mapDistrict, isMarketAnalysisOpen]);
+
+  const heroBanners = [
+    {
+      subtitle: "대구 전통시장 사장님을 위한 든든한 AI 파트너",
+      title: "전통시장 소상공인 매출·정산·세무 AI 도우미",
+      description: "복잡한 세무 신고부터 대구로페이 정산 내역까지 AI가 자동으로 요약하고 분석해 드립니다.",
+      cta: "정산 도우미 시작하기 >",
+    },
+    {
+      subtitle: "대구 청년 소상공인의 성공적인 첫걸음",
+      title: "청년 창업 매칭 및 시드 금융 연결 AI",
+      description: "iM뱅크 특례보증 금융과 지자체 창업 지원금을 매칭하여 시드 자금 마련을 도와드립니다.",
+      cta: "창업 매칭 받아보기 >",
+    },
+    {
+      subtitle: "DIP·공공 빅데이터 기반 상권 분석",
+      title: "골목상권 데이터 기반 AI 컨설팅",
+      description: "대구 구·군별 유동인구와 카드 매출 데이터를 바탕으로 내 매장의 최적 마케팅 전략을 제안합니다.",
+      cta: "내 상권 진단하기 >",
+    },
+  ];
+
+  const [bannerIndex, setBannerIndex] = useState(0);
+  const [isBannerPaused, setIsBannerPaused] = useState(false);
+
+  useEffect(() => {
+    if (isBannerPaused) {
+      return;
+    }
+
+    const timer = window.setInterval(() => {
+      setBannerIndex((prev) => (prev + 1) % heroBanners.length);
+    }, 5000);
+
+    return () => window.clearInterval(timer);
+  }, [isBannerPaused, heroBanners.length]);
+
+  const currentBanner = heroBanners[bannerIndex];
+
+  const goToBanner = (offset: number) => {
+    setBannerIndex((prev) => (prev + offset + heroBanners.length) % heroBanners.length);
+  };
+
+  const { lang, setLang, t } = useLanguage();
+  const quickActions = [
+    { label: "📍 " + t.quick1, key: "market" },
+    { label: "💰 " + t.quick2, key: "grant" },
+    { label: "🏦 " + t.quick3, key: "finance" },
+    { label: "📄 " + t.quick4, key: "generator" },
+    { label: "📣 " + t.quick5, key: "ai" },
+  ];
+  const languageOptions = ["KO", "EN", "JP", "ZH"] as const;
+  const languageLabelMap = {
     KO: "한국어",
     EN: "English",
     JP: "日本語",
     ZH: "中文",
-  };
+  } as const;
 
-  const heroTitle = isLoggedIn
-    ? "김사장님(대구 중구 카페), 반갑습니다!"
-    : t.heroTitle;
+  const heroTitle = isLoggedIn ? t.heroGreeting : t.heroTitle;
 
-  const heroSubtitle = isLoggedIn
-    ? "사장님 매장에 딱 맞는 지원 정책 3건이 기다리고 있습니다."
-    : t.heroSub;
+  const heroSubtitle = isLoggedIn ? t.heroWelcomeSubtitle : t.heroSub;
 
-  const guideLabel = t.nav5;
+  const guideLabel = t.navGuide;
 
   const nextLanguage = () => {
-    const currentIndex = languageOptions.indexOf(safeLanguage);
+    const currentIndex = languageOptions.indexOf(lang);
     const nextIndex = (currentIndex + 1) % languageOptions.length;
-    setLanguage(languageOptions[nextIndex]);
+    setLang(languageOptions[nextIndex]);
   };
 
   return (
@@ -366,7 +644,7 @@ export default function Home() {
                 onClick={nextLanguage}
                 className="shrink-0 rounded-full border border-white/20 bg-white/10 px-3 py-2 text-sm font-medium text-white transition hover:bg-white/15"
               >
-                {languageLabelMap[safeLanguage]} ▾
+                {languageLabelMap[lang]} ▾
               </button>
 
               {!isLoggedIn ? (
@@ -378,9 +656,18 @@ export default function Home() {
                   {t.login}
                 </button>
               ) : (
-                <div className="hidden shrink-0 items-center gap-3 rounded-full border border-white/20 bg-white/10 px-2 py-1 sm:flex">
-                  <span className="rounded-full bg-emerald-500 px-2 py-1 text-[10px] font-bold text-white">K</span>
-                  <span className="text-sm font-medium text-white">김사장님</span>
+                <div className="hidden shrink-0 items-center gap-2 sm:flex">
+                  <div className="flex items-center gap-3 rounded-full border border-white/20 bg-white/10 px-2 py-1">
+                    <span className="rounded-full bg-emerald-500 px-2 py-1 text-[10px] font-bold text-white">K</span>
+                    <span className="text-sm font-medium text-white">김사장님</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="shrink-0 rounded-full border border-white/20 bg-white/10 px-3 py-2 text-xs font-semibold text-white transition hover:bg-white/15"
+                  >
+                    로그아웃
+                  </button>
                 </div>
               )}
             </div>
@@ -389,12 +676,81 @@ export default function Home() {
       </header>
 
       <div className="mx-auto max-w-6xl px-4 pb-10 pt-6 sm:px-6 lg:px-8">
+        <section className="relative mx-auto my-6 max-w-6xl overflow-hidden rounded-3xl bg-white p-8 shadow-md md:p-12">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(16,185,129,0.10),_transparent_30%)]" />
+          <div className="relative">
+            <div className="transition-all duration-700 ease-in-out">
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-emerald-700">
+                {currentBanner.subtitle}
+              </p>
+              <h2 className="mt-4 max-w-xl text-2xl font-bold text-gray-900 md:text-3xl">
+                {currentBanner.title}
+              </h2>
+              <p className="mt-4 max-w-lg text-base leading-7 text-slate-600">
+                {currentBanner.description}
+              </p>
+
+              <div className="mt-6 flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  className="rounded-full bg-emerald-600 px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-500"
+                >
+                  {currentBanner.cta}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="relative mt-8 flex flex-col gap-4 border-t border-emerald-100 pt-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3">
+              {heroBanners.map((_, index) => (
+                <button
+                  key={index}
+                  type="button"
+                  onClick={() => setBannerIndex(index)}
+                  className={`h-3 w-3 rounded-full transition-all ${
+                    index === bannerIndex ? "w-7 bg-emerald-600" : "bg-emerald-200"
+                  }`}
+                  aria-label={`배너 ${index + 1}`}
+                />
+              ))}
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setIsBannerPaused((prev) => !prev)}
+                className="flex h-9 w-9 items-center justify-center rounded-full border border-emerald-200 bg-emerald-50 text-lg text-emerald-700 transition hover:bg-emerald-100"
+                aria-label={isBannerPaused ? "재생" : "일시정지"}
+              >
+                {isBannerPaused ? "▶" : "⏸"}
+              </button>
+              <button
+                type="button"
+                onClick={() => goToBanner(-1)}
+                className="flex h-9 w-9 items-center justify-center rounded-full border border-emerald-200 bg-emerald-50 text-lg text-emerald-700 transition hover:bg-emerald-100"
+                aria-label="이전 슬라이드"
+              >
+                &lt;
+              </button>
+              <button
+                type="button"
+                onClick={() => goToBanner(1)}
+                className="flex h-9 w-9 items-center justify-center rounded-full border border-emerald-200 bg-emerald-50 text-lg text-emerald-700 transition hover:bg-emerald-100"
+                aria-label="다음 슬라이드"
+              >
+                &gt;
+              </button>
+            </div>
+          </div>
+        </section>
+
         <section className="rounded-[32px] bg-white p-6 shadow-[0_20px_50px_rgba(15,23,42,0.08)] sm:p-8 lg:p-10">
           <div className="grid gap-8 lg:grid-cols-[1.35fr_0.65fr] lg:items-center">
             <div>
               <div className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-emerald-700 ring-1 ring-emerald-100">
                 <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                AI 맞춤 상권 분석
+                {t.summaryLabel}
               </div>
 
               <h1 className="mt-4 max-w-xl text-3xl font-bold leading-tight text-gray-900 md:text-4xl">
@@ -407,7 +763,7 @@ export default function Home() {
 
               <div className="mt-8 grid gap-4 sm:grid-cols-3">
                 <label className="block">
-                  <span className="mb-2 block text-sm font-semibold text-slate-600">지역</span>
+                  <span className="mb-2 block text-sm font-semibold text-slate-600">{t.region}</span>
                   <select
                     value={selectedRegion}
                     onChange={(event) => setSelectedRegion(event.target.value)}
@@ -422,7 +778,7 @@ export default function Home() {
                 </label>
 
                 <label className="block">
-                  <span className="mb-2 block text-sm font-semibold text-slate-600">업종</span>
+                  <span className="mb-2 block text-sm font-semibold text-slate-600">{t.industry}</span>
                   <select
                     value={selectedIndustry}
                     onChange={(event) => setSelectedIndustry(event.target.value)}
@@ -437,7 +793,7 @@ export default function Home() {
                 </label>
 
                 <label className="block">
-                  <span className="mb-2 block text-sm font-semibold text-slate-600">매출</span>
+                  <span className="mb-2 block text-sm font-semibold text-slate-600">{t.revenue}</span>
                   <select
                     value={selectedRevenue}
                     onChange={(event) => setSelectedRevenue(event.target.value)}
@@ -458,21 +814,14 @@ export default function Home() {
                   onClick={() => setIsAiOpen(true)}
                   className="inline-flex items-center justify-center rounded-full bg-emerald-600 px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-500"
                 >
-                  AI 상담사와 대화하기
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsLoginModalOpen(true)}
-                  className="inline-flex items-center justify-center rounded-full border border-emerald-200 bg-emerald-50 px-5 py-3 text-sm font-bold text-emerald-800 transition hover:bg-emerald-100"
-                >
-                  소셜 로그인 / 회원가입
+                  {t.aiConsult}
                 </button>
               </div>
             </div>
 
             <div className="rounded-[28px] border border-emerald-100 bg-gradient-to-br from-emerald-50 via-white to-green-50 p-5 shadow-[0_18px_40px_rgba(16,185,129,0.08)]">
               <div className="flex items-center justify-between">
-                <p className="text-sm font-semibold text-emerald-800">이달 실적</p>
+                <p className="text-sm font-semibold text-emerald-800">{t.performance}</p>
                 <span className="rounded-full bg-emerald-600 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-white">
                   Live
                 </span>
@@ -490,12 +839,12 @@ export default function Home() {
 
               <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
                 <div className="rounded-2xl border border-emerald-100 bg-white p-4 shadow-sm">
-                  <div className="text-xs font-medium uppercase tracking-[0.12em] text-slate-500">누적 매출</div>
+                  <div className="text-xs font-medium uppercase tracking-[0.12em] text-slate-500">{t.cardSales}</div>
                   <div className="mt-2 text-2xl font-extrabold text-emerald-950">1,420만</div>
                   <div className="mt-1 text-sm font-medium text-emerald-700">+8.5% 전월 대비</div>
                 </div>
                 <div className="rounded-2xl border border-emerald-100 bg-white p-4 shadow-sm">
-                  <div className="text-xs font-medium uppercase tracking-[0.12em] text-slate-500">우대금리</div>
+                  <div className="text-xs font-medium uppercase tracking-[0.12em] text-slate-500">{t.cardRate}</div>
                   <div className="mt-2 text-2xl font-extrabold text-emerald-950">0.5%p</div>
                   <div className="mt-1 text-sm font-medium text-emerald-700">월 12.5만 절감</div>
                 </div>
@@ -524,12 +873,16 @@ export default function Home() {
                   window.location.href = "/generator";
                   return;
                 }
+                if (action.key === "grant") {
+                  window.location.href = "/grants";
+                  return;
+                }
                 if (action.key === "ai") {
                   setIsAiOpen(true);
                   return;
                 }
                 if (action.key === "market") {
-                  window.scrollTo({ top: document.body.scrollHeight * 0.2, behavior: "smooth" });
+                  setIsMarketAnalysisOpen(true);
                   return;
                 }
                 setIsAiOpen(true);
@@ -543,13 +896,69 @@ export default function Home() {
         </div>
       </div>
 
-      <div className="mx-auto mt-8 max-w-6xl p-4">
-        <GrantMatcher
-          initialRegion="대구 중구"
-          initialBusinessType="음식점업"
-          selectedRegion={selectedRegion}
-          selectedBusinessType={selectedIndustry}
-        />
+      <div className="mx-auto my-8 max-w-6xl px-4">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <div className="lg:col-span-2 rounded-3xl border border-gray-100 bg-white p-6 shadow-sm">
+            <div className="mb-5 flex items-center justify-between border-b border-gray-100 pb-3">
+              <div className="flex items-center gap-4">
+                {(["notice", "event"] as const).map((tab) => (
+                  <button
+                    key={tab}
+                    type="button"
+                    onClick={() => setActiveNoticeTab(tab)}
+                    className={`pb-2 text-sm font-medium transition ${
+                      activeNoticeTab === tab
+                        ? "border-b-2 border-emerald-600 pb-[9px] text-emerald-600 font-bold"
+                        : "text-gray-500 hover:text-gray-800"
+                    }`}
+                  >
+                    {tab === "notice" ? t.notice : t.event}
+                  </button>
+                ))}
+              </div>
+
+              <button type="button" className="text-xs text-gray-500 transition hover:text-gray-800">
+                {t.more} +
+              </button>
+            </div>
+
+            <ul className="space-y-3">
+              {noticeItems[activeNoticeTab].map((item) => (
+                <li key={`${activeNoticeTab}-${item.title}`} className="flex items-center justify-between gap-4">
+                  <button type="button" className="truncate text-left text-sm text-gray-700 transition hover:text-emerald-600 cursor-pointer">
+                    {item.title}
+                  </button>
+                  <span className="shrink-0 text-xs text-gray-400">{item.date}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="rounded-3xl border border-gray-100 bg-white p-6 shadow-sm">
+            <h3 className="mb-4 text-base font-bold text-gray-900">{t.appTitle}</h3>
+            <div className="flex items-center justify-around gap-4">
+              {appLinks.map((app) => (
+                <button
+                  key={app.name}
+                  type="button"
+                  onClick={() => {
+                    if (typeof window !== "undefined") {
+                      window.open(app.url, "_blank", "noopener,noreferrer");
+                    }
+                  }}
+                  className="flex flex-col items-center text-center"
+                >
+                  <div
+                    className={`flex h-14 w-14 items-center justify-center rounded-2xl text-base font-black text-white shadow-sm ${app.accent}`}
+                  >
+                    {app.icon}
+                  </div>
+                  <span className="mt-2 text-center text-[11px] font-medium text-gray-700">{app.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
 
       <section className="mx-auto mt-8 max-w-6xl rounded-[28px] border border-emerald-200 bg-white/80 p-6 shadow-[0_18px_40px_rgba(16,185,129,0.06)] backdrop-blur-sm">
@@ -591,36 +1000,158 @@ export default function Home() {
             </div>
 
             <div className="mt-6 space-y-3">
-              <button
-                type="button"
-                disabled={!!loginLoadingProvider}
-                onClick={() => handleSocialLogin('kakao')}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#FEE500] py-3 text-base font-semibold text-black transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-70"
-              >
-                <span>💬</span>
-                {loginLoadingProvider === 'kakao' ? '로그인 중...' : '카카오로 시작하기'}
-              </button>
+              <p className="text-center text-sm text-slate-500">
+                로그인 기능은 준비 중입니다.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
+      {isMarketAnalysisOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/45 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-6xl overflow-hidden rounded-[32px] border border-emerald-200 bg-white shadow-[0_30px_80px_rgba(15,118,110,0.2)]">
+            <div className="flex items-center justify-between border-b border-emerald-100 bg-emerald-600 px-5 py-4 text-white sm:px-6">
+              <div>
+                <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-100">Daegu City</div>
+                <h3 className="mt-1 text-xl font-extrabold">{t.marketAnalysisTitle}</h3>
+              </div>
               <button
                 type="button"
-                disabled={!!loginLoadingProvider}
-                onClick={() => handleSocialLogin('google')}
-                className="flex w-full items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white py-3 text-base font-semibold text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-70"
+                onClick={() => setIsMarketAnalysisOpen(false)}
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-lg font-bold transition hover:bg-white/15"
+                aria-label="닫기"
               >
-                <span>🔵</span>
-                {loginLoadingProvider === 'google' ? '로그인 중...' : '구글로 시작하기'}
-              </button>
-
-              <button
-                type="button"
-                disabled={!!loginLoadingProvider}
-                onClick={() => handleSocialLogin('apple')}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-black py-3 text-base font-semibold text-white transition hover:bg-slate-900 disabled:cursor-not-allowed disabled:opacity-70"
-              >
-                <span></span>
-                {loginLoadingProvider === 'apple' ? '로그인 중...' : 'Apple로 시작하기'}
+                ×
               </button>
             </div>
+
+            <div className="flex max-h-[80vh] flex-col overflow-hidden lg:flex-row">
+              <div className="relative min-h-[420px] flex-1 bg-[#ecfdf5] p-4 lg:min-h-0">
+                <div className="relative h-[500px] w-full overflow-hidden rounded-2xl border border-emerald-200 shadow-inner">
+                  <div ref={mapContainerRef} className="h-full w-full overflow-hidden rounded-2xl" />
+                </div>
+                <div className="pointer-events-none absolute left-4 top-4 rounded-full border border-emerald-200 bg-white/80 px-3 py-1.5 text-[11px] font-bold text-emerald-700 shadow-sm backdrop-blur-sm">
+                  대구광역시 범위 내 분석
+                </div>
+              </div>
+
+              <div className="w-full border-t border-emerald-100 bg-slate-50 p-5 lg:w-[360px] lg:border-l lg:border-t-0">
+                <div className="space-y-4">
+                  <label className="block">
+                    <span className="mb-2 block text-sm font-semibold text-slate-600">{t.marketDistrict}</span>
+                    <select
+                      value={mapDistrict}
+                      onChange={(event) => {
+                        const district = event.target.value;
+                        const center = districtCenterMap[district] ?? districtCenterMap["대구 중구"];
+                        setMapDistrict(district);
+                        setMapMarker({
+                          lat: center.lat,
+                          lng: center.lng,
+                          label: `${district} ${center.dong}`,
+                        });
+                        setReportLocationName(`${district} ${center.dong}`);
+                      }}
+                      className="w-full rounded-2xl border border-emerald-100 bg-white px-3 py-3 text-sm font-medium text-slate-800 outline-none transition focus:border-emerald-300"
+                    >
+                      {mapDistrictOptions.map((district) => (
+                        <option key={district} value={district}>{district}</option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="block">
+                    <span className="mb-2 block text-sm font-semibold text-slate-600">{t.marketIndustry}</span>
+                    <select
+                      value={mapIndustry}
+                      onChange={(event) => setMapIndustry(event.target.value)}
+                      className="w-full rounded-2xl border border-emerald-100 bg-white px-3 py-3 text-sm font-medium text-slate-800 outline-none transition focus:border-emerald-300"
+                    >
+                      {mapIndustryOptions.map((industry) => (
+                        <option key={industry} value={industry}>{industry}</option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+
+                <div className="mt-5 rounded-[24px] border border-emerald-200 bg-white p-4 shadow-sm">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-700">{t.marketScore}</span>
+                    <span className="text-right text-lg font-extrabold text-emerald-700">{currentMapMetrics.score}</span>
+                  </div>
+                  <div className="mt-3 h-2.5 rounded-full bg-emerald-100">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-lime-400"
+                      style={{ width: `${Number.parseInt(currentMapMetrics.score, 10) || 88}%` }}
+                    />
+                  </div>
+                  <p className="mt-3 text-sm leading-6 text-slate-600">{currentMapMetrics.insight}</p>
+                </div>
+
+                <div className="mt-4 space-y-3">
+                  <div className="rounded-2xl border border-emerald-100 bg-white p-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">{t.marketTraffic}</p>
+                    <p className="mt-2 text-sm font-bold text-slate-800">{currentMapMetrics.traffic}</p>
+                  </div>
+                  <div className="rounded-2xl border border-emerald-100 bg-white p-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">{t.marketDaeguPay}</p>
+                    <p className="mt-2 text-sm font-bold text-slate-800">{currentMapMetrics.pay}</p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleGenerateReport}
+                  className="mt-5 w-full rounded-full bg-emerald-600 px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-500"
+                >
+                  {t.marketReportGenerate}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isReportModalOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/45 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-[28px] border border-emerald-200 bg-white p-6 shadow-[0_30px_80px_rgba(15,118,110,0.2)]">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-emerald-700">AI 리포트 생성</p>
+                <h3 className="mt-2 text-2xl font-extrabold text-emerald-950">{reportLocationName}</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsReportModalOpen(false)}
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-50 text-lg text-emerald-700 transition hover:bg-emerald-100"
+                aria-label="리포트 모달 닫기"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="mt-5 rounded-[22px] border border-emerald-100 bg-emerald-50 p-4">
+              <div className="text-sm font-semibold text-emerald-900">상권 분석 요약</div>
+              <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-700">
+                <li>• {mapIndustry} 업종 기준, {mapDistrict} 지역의 잠재 고객층이 안정적으로 형성되어 있습니다.</li>
+                <li>• {currentMapMetrics.traffic}</li>
+                <li>• {currentMapMetrics.pay} 기준으로 결제 확장성이 우수합니다.</li>
+              </ul>
+            </div>
+
+            <div className="mt-5 rounded-[18px] border border-slate-200 bg-slate-50 p-4 text-sm leading-6 text-slate-600">
+              <div className="font-semibold text-slate-800">추천 실무 조치</div>
+              <p className="mt-2">주간 피크 타임 집중 프로모션, 대구로페이 결제 인센티브, 내점 유도형 SNS 광고를 병행하면 매출 반응을 높일 수 있습니다.</p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setIsReportModalOpen(false)}
+              className="mt-6 w-full rounded-full bg-emerald-600 px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-500"
+            >
+              보고서 저장 및 확인
+            </button>
           </div>
         </div>
       )}

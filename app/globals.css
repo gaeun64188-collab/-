@@ -32,6 +32,24 @@ select {
   font: inherit;
 }
 
+.leaflet-container {
+  width: 100% !important;
+  height: 100% !important;
+  background: #d9fbe8 !important;
+  border-radius: 1rem;
+}
+
+.leaflet-control-container {
+  z-index: 10;
+}
+
+.leaflet-pane,
+.leaflet-tile,
+.leaflet-marker-pane,
+.leaflet-popup-pane {
+  z-index: 1;
+}
+
 @media print {
   .no-print {
     display: none !important;

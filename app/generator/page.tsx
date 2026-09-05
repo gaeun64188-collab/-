@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useLanguage } from "../context/LanguageContext";
 
 const supportOptions = [
   "대구시 소상공인 창업·경영 지원금",
@@ -28,7 +29,21 @@ const usePurposeOptions = [
 ];
 
 export default function GeneratorPage() {
+  const { lang, setLang, t } = useLanguage();
   const [selectedSupport, setSelectedSupport] = useState(supportOptions[0]);
+  const languageOptions = ["KO", "EN", "JP", "ZH"] as const;
+  const languageLabelMap = {
+    KO: "한국어",
+    EN: "English",
+    JP: "日本語",
+    ZH: "中文",
+  } as const;
+
+  const nextLanguage = () => {
+    const currentIndex = languageOptions.indexOf(lang);
+    const nextIndex = (currentIndex + 1) % languageOptions.length;
+    setLang(languageOptions[nextIndex]);
+  };
   const [storeName, setStoreName] = useState("대구 카페 24");
   const [industry, setIndustry] = useState("카페");
   const [district, setDistrict] = useState("대구 중구");
@@ -102,15 +117,24 @@ export default function GeneratorPage() {
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-700">AI 사업계획서 생성기</p>
               <h1 className="mt-2 text-3xl font-extrabold tracking-tight text-emerald-950">
-                대구시 소상공인 지원금 신청, AI가 3분 만에 사업계획서를 작성해 드립니다.
+                {t.generatorTitle}
               </h1>
             </div>
-            <a
-              href="/"
-              className="inline-flex items-center justify-center rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-bold text-emerald-800 transition hover:bg-emerald-100"
-            >
-              🏠 홈으로 가기
-            </a>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={nextLanguage}
+                className="inline-flex items-center justify-center rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-bold text-emerald-800 transition hover:bg-emerald-100"
+              >
+                {languageLabelMap[lang]} ▾
+              </button>
+              <a
+                href="/"
+                className="inline-flex items-center justify-center rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-bold text-emerald-800 transition hover:bg-emerald-100"
+              >
+                🏠 {t.home}
+              </a>
+            </div>
           </div>
         </header>
 
@@ -212,7 +236,7 @@ export default function GeneratorPage() {
               onClick={handleGenerate}
               className="w-full rounded-2xl bg-gradient-to-r from-emerald-600 to-green-500 px-5 py-4 text-lg font-extrabold text-white shadow-[0_16px_35px_rgba(16,185,129,0.25)] transition hover:brightness-105"
             >
-              🤖 AI 사업계획서 자동 생성하기
+              {t.generatorCta}
             </button>
           </section>
 

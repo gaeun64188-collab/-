@@ -1,21 +1,24 @@
+"use client";
+
 import Link from "next/link";
+import { useLanguage } from "../context/LanguageContext";
 
 const steps = [
   {
     badge: "STEP 1",
-    title: "🎯 맞춤 지원 정책 조회",
+    titleKey: "guideStep1",
     description:
       "대구시 8개 구·군 및 업종별 검색을 통해 내 매장에 꼭 맞는 지원금과 iM뱅크 특례보증 상품을 실시간 탐색합니다.",
   },
   {
     badge: "STEP 2",
-    title: "📄 AI 사업계획서 3분 완성",
+    titleKey: "guideStep2",
     description:
       "간단한 매장 정보 입력만으로 대구시 제출 양식에 맞는 사업계획서와 필수 제출 서류 목록을 AI가 자동 생성해 드립니다.",
   },
   {
     badge: "STEP 3",
-    title: "💳 대구로페이 & 금융 혜택 적용",
+    titleKey: "guideStep3",
     description:
       "대구로페이 가맹점 등록과 iM뱅크 계좌 연동으로 대출 우대 금리(최대 0.5%p) 및 결제 수수료 감면 혜택을 누리세요.",
   },
@@ -35,6 +38,21 @@ const faqs = [
 ];
 
 export default function GuidePage() {
+  const { lang, setLang, t } = useLanguage();
+  const languageOptions = ["KO", "EN", "JP", "ZH"] as const;
+  const languageLabelMap = {
+    KO: "한국어",
+    EN: "English",
+    JP: "日本語",
+    ZH: "中文",
+  } as const;
+
+  const nextLanguage = () => {
+    const currentIndex = languageOptions.indexOf(lang);
+    const nextIndex = (currentIndex + 1) % languageOptions.length;
+    setLang(languageOptions[nextIndex]);
+  };
+
   return (
     <main className="min-h-screen bg-[#f0fdf4] text-slate-800">
       <header className="bg-emerald-600 text-white shadow-[0_16px_32px_rgba(5,150,105,0.18)]">
@@ -51,11 +69,18 @@ export default function GuidePage() {
             </Link>
 
             <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={nextLanguage}
+                className="rounded-full border border-white/20 bg-white/10 px-3 py-2 text-sm font-medium text-white transition hover:bg-white/15"
+              >
+                {languageLabelMap[lang]} ▾
+              </button>
               <Link
                 href="/"
                 className="rounded-full border border-white/20 bg-white/10 px-3 py-2 text-sm font-medium text-white transition hover:bg-white/15"
               >
-                홈으로
+                {t.home}
               </Link>
             </div>
           </div>
@@ -66,13 +91,13 @@ export default function GuidePage() {
         <section className="rounded-[28px] bg-white p-6 shadow-[0_20px_50px_rgba(15,23,42,0.08)] sm:p-8 lg:p-10">
           <div className="mx-auto max-w-3xl text-center">
             <span className="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-emerald-700 ring-1 ring-emerald-100">
-              이용 안내
+              {t.navGuide}
             </span>
             <h1 className="mt-5 text-3xl font-bold text-slate-900 md:text-5xl">
-              iM 소상공인 플랫폼 이용 안내
+              {t.guideTitle}
             </h1>
             <p className="mt-4 text-base text-slate-600 md:text-lg">
-              대구시 사장님을 위한 지원금 신청부터 iM뱅크 금융 혜택까지, 3단계로 쉽게 시작하세요.
+              {t.guideSubtitle}
             </p>
           </div>
 
@@ -85,7 +110,7 @@ export default function GuidePage() {
                 <span className="inline-flex rounded-full bg-emerald-600 px-3 py-1 text-xs font-bold text-white">
                   {step.badge}
                 </span>
-                <h2 className="mt-5 text-xl font-bold text-slate-900">{step.title}</h2>
+                <h2 className="mt-5 text-xl font-bold text-slate-900">{t[step.titleKey as keyof typeof t]}</h2>
                 <p className="mt-3 text-sm leading-7 text-slate-600">{step.description}</p>
               </article>
             ))}
@@ -94,7 +119,7 @@ export default function GuidePage() {
 
         <section className="mt-10 rounded-[28px] bg-white p-6 shadow-[0_20px_50px_rgba(15,23,42,0.08)] sm:p-8">
           <div className="mb-6 text-center">
-            <h2 className="text-2xl font-bold text-slate-900">자주 묻는 질문</h2>
+            <h2 className="text-2xl font-bold text-slate-900">{t.faqTitle}</h2>
           </div>
 
           <div className="space-y-4">
@@ -118,7 +143,7 @@ export default function GuidePage() {
             href="/"
             className="inline-flex items-center justify-center rounded-full bg-emerald-600 px-6 py-3 text-base font-bold text-white shadow-sm transition hover:bg-emerald-500"
           >
-            🚀 내 매장 맞춤 지원금 바로 찾기
+            {t.guideCTA}
           </Link>
         </div>
       </div>
