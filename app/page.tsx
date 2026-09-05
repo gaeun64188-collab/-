@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { AnimatePresence, animate, motion, useMotionValue, useSpring } from "framer-motion";
 import { useEffect, useMemo, useRef, useState } from "react";
 import AIConsultant from "./components/ai-consultant";
 import GrantMatcher from './components/grant-matcher';
@@ -256,6 +257,39 @@ const appLinks = [
     url: "https://www.imbank.co.kr/",
   },
 ] as const;
+
+function AnimatedNumber({
+  value,
+  suffix = "",
+  decimals = 0,
+  duration = 1.2,
+}: {
+  value: number;
+  suffix?: string;
+  decimals?: number;
+  duration?: number;
+}) {
+  const motionValue = useMotionValue(0);
+  const springValue = useSpring(motionValue, { stiffness: 90, damping: 22 });
+  const [displayValue, setDisplayValue] = useState(0);
+
+  useEffect(() => {
+    const controls = animate(motionValue, value, {
+      duration,
+      ease: "easeOut" as const,
+      onUpdate: (latest) => setDisplayValue(Number(latest.toFixed(decimals))),
+    });
+
+    return () => controls.stop();
+  }, [decimals, duration, motionValue, value]);
+
+  const formattedValue = `${displayValue.toLocaleString(undefined, {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  })}${suffix}`;
+
+  return <motion.span style={{ opacity: springValue ? 1 : 1 }}>{formattedValue}</motion.span>;
+}
 
 export default function Home() {
   const [selectedRegion, setSelectedRegion] = useState("대구 중구");
@@ -586,6 +620,15 @@ export default function Home() {
     setBannerIndex((prev) => (prev + offset + heroBanners.length) % heroBanners.length);
   };
 
+  const entranceVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: { duration: 0.5, ease: "easeOut" as const },
+    },
+  };
+
   const { lang, setLang, t } = useLanguage();
   const quickActions = [
     { label: "📍 " + t.quick1, key: "market" },
@@ -676,29 +719,43 @@ export default function Home() {
       </header>
 
       <div className="mx-auto max-w-[1180px] px-4 pb-10 pt-6 sm:px-6 lg:px-8">
-        <section className="relative mx-auto my-6 overflow-hidden rounded-[28px] bg-white p-8 shadow-[0_12px_28px_rgba(13,148,136,0.08)] md:p-12">
+        <motion.section
+          initial="hidden"
+          animate="visible"
+          variants={entranceVariants}
+          className="relative mx-auto my-6 overflow-hidden rounded-[28px] bg-white p-8 shadow-[0_12px_28px_rgba(13,148,136,0.08)] md:p-12"
+        >
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(16,185,129,0.10),_transparent_30%)]" />
           <div className="relative">
-            <div className="transition-all duration-700 ease-in-out">
-              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-emerald-700">
-                {currentBanner.subtitle}
-              </p>
-              <h2 className="mt-4 max-w-xl text-2xl font-bold text-gray-900 md:text-3xl">
-                {currentBanner.title}
-              </h2>
-              <p className="mt-4 max-w-lg text-base leading-7 text-slate-600">
-                {currentBanner.description}
-              </p>
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={currentBanner.title}
+                initial={{ opacity: 0, y: 18 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -18 }}
+                transition={{ duration: 0.45, ease: "easeOut" as const }}
+                className="transition-all duration-700 ease-in-out"
+              >
+                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-emerald-700">
+                  {currentBanner.subtitle}
+                </p>
+                <h2 className="mt-4 max-w-xl text-2xl font-bold text-gray-900 md:text-3xl">
+                  {currentBanner.title}
+                </h2>
+                <p className="mt-4 max-w-lg text-base leading-7 text-slate-600">
+                  {currentBanner.description}
+                </p>
 
-              <div className="mt-6 flex flex-wrap items-center gap-3">
-                <button
-                  type="button"
-                  className="rounded-full bg-emerald-600 px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-500"
-                >
-                  {currentBanner.cta}
-                </button>
-              </div>
-            </div>
+                <div className="mt-6 flex flex-wrap items-center gap-3">
+                  <button
+                    type="button"
+                    className="rounded-full bg-emerald-600 px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-500"
+                  >
+                    {currentBanner.cta}
+                  </button>
+                </div>
+              </motion.div>
+            </AnimatePresence>
           </div>
 
           <div className="relative mt-8 flex flex-col gap-4 border-t border-emerald-100 pt-4 sm:flex-row sm:items-center sm:justify-between">
@@ -743,7 +800,7 @@ export default function Home() {
               </button>
             </div>
           </div>
-        </section>
+        </motion.section>
 
         <div className="mx-auto my-3 max-w-6xl rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5">
           <div className="flex items-center justify-between gap-3">
@@ -761,7 +818,13 @@ export default function Home() {
           </div>
         </div>
 
-        <section className="rounded-[30px] bg-white p-6 shadow-[0_20px_50px_rgba(15,23,42,0.08)] sm:p-8 lg:p-10">
+        <motion.section
+          initial="hidden"
+          animate="visible"
+          variants={entranceVariants}
+          transition={{ delay: 0.08, duration: 0.5 }}
+          className="rounded-[30px] bg-white p-6 shadow-[0_20px_50px_rgba(15,23,42,0.08)] sm:p-8 lg:p-10"
+        >
           <div className="grid gap-8 lg:grid-cols-[1.45fr_0.55fr] lg:items-center">
             <div>
               <div className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-emerald-700 ring-1 ring-emerald-100">
@@ -854,22 +917,26 @@ export default function Home() {
               </div>
 
               <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
-                <div className="rounded-2xl border border-emerald-100 bg-white p-4 shadow-sm">
+                <motion.div whileHover={{ y: -4, scale: 1.01 }} className="rounded-2xl border border-emerald-100 bg-white p-4 shadow-sm">
                   <div className="text-xs font-medium uppercase tracking-[0.12em] text-slate-500">{t.cardSales}</div>
-                  <div className="mt-2 text-2xl font-extrabold text-emerald-950">1,420만</div>
+                  <div className="mt-2 text-2xl font-extrabold text-emerald-950">
+                    <AnimatedNumber value={1420} suffix="만" />
+                  </div>
                   <div className="mt-1 text-sm font-medium text-emerald-700">+8.5% 전월 대비</div>
-                </div>
-                <div className="rounded-2xl border border-emerald-100 bg-white p-4 shadow-sm">
+                </motion.div>
+                <motion.div whileHover={{ y: -4, scale: 1.01 }} className="rounded-2xl border border-emerald-100 bg-white p-4 shadow-sm">
                   <div className="text-xs font-medium uppercase tracking-[0.12em] text-slate-500">{t.cardRate}</div>
-                  <div className="mt-2 text-2xl font-extrabold text-emerald-950">0.5%p</div>
+                  <div className="mt-2 text-2xl font-extrabold text-emerald-950">
+                    <AnimatedNumber value={0.5} suffix="%p" decimals={1} />
+                  </div>
                   <div className="mt-1 text-sm font-medium text-emerald-700">월 12.5만 절감</div>
-                </div>
+                </motion.div>
               </div>
 
               <div className="mt-4 rounded-[22px] bg-emerald-600 p-4 text-white shadow-sm">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-medium uppercase tracking-[0.12em] text-emerald-100">예상 적합도</span>
-                  <span className="text-lg font-bold">{currentData.score}</span>
+                  <span className="text-lg font-bold"><AnimatedNumber value={Number.parseInt(currentData.score, 10) || 88} suffix="%" /></span>
                 </div>
                 <div className="mt-3 text-sm text-emerald-50">
                   {selectedRegion} · {selectedIndustry} 업종에 가장 적합한 금융/지원 조건을 선별 중입니다.
@@ -877,13 +944,28 @@ export default function Home() {
               </div>
             </div>
           </div>
-        </section>
+        </motion.section>
 
-        <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <motion.div
+          initial="hidden"
+          animate="visible"
+          variants={{
+            hidden: {},
+            visible: {
+              transition: {
+                staggerChildren: 0.08,
+              },
+            },
+          }}
+          className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5"
+        >
           {quickActions.map((action) => (
-            <button
+            <motion.button
               key={action.key}
               type="button"
+              variants={entranceVariants}
+              whileHover={{ scale: 1.03, y: -5 }}
+              whileTap={{ scale: 0.98 }}
               onClick={() => {
                 if (action.key === "generator") {
                   window.location.href = "/generator";
@@ -903,32 +985,42 @@ export default function Home() {
                 }
                 setIsAiOpen(true);
               }}
-              className="rounded-[22px] border border-emerald-200 bg-white px-4 py-4 text-left shadow-[0_10px_28px_rgba(16,185,129,0.06)] transition hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-[0_14px_28px_rgba(16,185,129,0.12)]"
+              className="rounded-[22px] border border-emerald-200 bg-white px-4 py-4 text-left shadow-[0_10px_28px_rgba(16,185,129,0.06)] transition hover:border-emerald-300 hover:shadow-[0_14px_28px_rgba(16,185,129,0.12)]"
             >
               <div className="text-lg">{action.label.split(" ")[0]}</div>
               <div className="mt-2 text-sm font-semibold text-slate-700">{action.label.replace(/^\S+\s/, "")}</div>
-            </button>
+            </motion.button>
           ))}
-        </div>
+        </motion.div>
       </div>
 
       <div className="mx-auto my-8 max-w-[1180px] px-4">
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-          <div className="lg:col-span-2 rounded-3xl border border-gray-100 bg-white p-6 shadow-sm">
+          <motion.div
+            initial="hidden"
+            animate="visible"
+            variants={entranceVariants}
+            className="lg:col-span-2 rounded-3xl border border-gray-100 bg-white p-6 shadow-sm"
+          >
             <div className="mb-5 flex items-center justify-between border-b border-gray-100 pb-3">
-              <div className="flex items-center gap-4">
+              <div className="relative flex items-center gap-4">
                 {(["notice", "event"] as const).map((tab) => (
                   <button
                     key={tab}
                     type="button"
                     onClick={() => setActiveNoticeTab(tab)}
-                    className={`pb-2 text-sm font-medium transition ${
-                      activeNoticeTab === tab
-                        ? "border-b-2 border-emerald-600 pb-[9px] text-emerald-600 font-bold"
-                        : "text-gray-500 hover:text-gray-800"
+                    className={`relative z-10 pb-2 text-sm font-medium transition ${
+                      activeNoticeTab === tab ? "text-emerald-600 font-bold" : "text-gray-500 hover:text-gray-800"
                     }`}
                   >
                     {tab === "notice" ? t.notice : t.event}
+                    {activeNoticeTab === tab && (
+                      <motion.span
+                        layoutId="notice-tab-underline"
+                        className="absolute inset-x-0 -bottom-[11px] h-[2px] rounded-full bg-emerald-600"
+                        transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                      />
+                    )}
                   </button>
                 ))}
               </div>
@@ -948,9 +1040,15 @@ export default function Home() {
                 </li>
               ))}
             </ul>
-          </div>
+          </motion.div>
 
-          <div className="rounded-3xl border border-gray-100 bg-white p-6 shadow-sm">
+          <motion.div
+            initial="hidden"
+            animate="visible"
+            variants={entranceVariants}
+            transition={{ delay: 0.1 }}
+            className="rounded-3xl border border-gray-100 bg-white p-6 shadow-sm"
+          >
             <h3 className="mb-4 text-base font-bold text-gray-900">{t.appTitle}</h3>
             <div className="flex items-center justify-around gap-4">
               {appLinks.map((app) => (
@@ -973,7 +1071,7 @@ export default function Home() {
                 </button>
               ))}
             </div>
-          </div>
+          </motion.div>
         </div>
       </div>
 
