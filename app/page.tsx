@@ -341,7 +341,7 @@ export default function Home() {
                   <p className="text-sm text-emerald-50/80">핵심 인사이트</p>
                   <div className="mt-3 flex items-center justify-between gap-4">
                     <div>
-                      <p className="text-2xl font-bold">{selectedRegion} {currentData.district}</p>
+                      <p className="text-2xl font-bold">{selectedRegion}</p>
                       <p className="mt-1 text-sm text-emerald-50/90">{selectedIndustry} 업종 기준 {currentData.insight}</p>
                     </div>
                     <div className="rounded-2xl border border-white/20 bg-white/10 px-3 py-2 text-right backdrop-blur-sm">
@@ -357,7 +357,7 @@ export default function Home() {
       </div>
 
       <div className="mx-auto max-w-6xl mt-8 p-4">
-        <GrantMatcher initialRegion="대구 중구" initialBusinessType="식당" />
+        <GrantMatcher initialRegion="대구 중구" initialBusinessType="음식점업" />
       </div>
 
       <AIConsultant open={isAiOpen} onClose={() => setIsAiOpen(false)} />

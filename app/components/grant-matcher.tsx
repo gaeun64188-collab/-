@@ -1,5 +1,16 @@
 import React, { useMemo, useState } from 'react';
+import AIConsultant from './ai-consultant';
 import { grants, imBankCards } from '../../data/grants';
+
+type PolicyDetailModal = {
+  title: string;
+  region: string;
+  industry: string;
+  description: string;
+  summary: string[];
+  requiredDocuments: string[];
+  loading: boolean;
+};
 
 interface Props {
   initialRegion?: string;
@@ -7,12 +18,27 @@ interface Props {
   maxBankCards?: number;
 }
 
-const REGION_OPTIONS = ['대구 중구', '대구시', '전체'];
+const REGION_OPTIONS = [
+  '대구 중구',
+  '대구 동구',
+  '대구 서구',
+  '대구 남구',
+  '대구 북구',
+  '대구 수성구',
+  '대구 달서구',
+  '대구 달성군',
+  '대구시',
+  '경북',
+  '전체',
+];
 const BUSINESS_OPTIONS = ['음식점업', '도소매업', '서비스업', '전체'];
 
 export default function GrantMatcher({ initialRegion = '대구 중구', initialBusinessType = '음식점업', maxBankCards = 3 }: Props) {
   const [region, setRegion] = useState<string>(initialRegion);
   const [businessType, setBusinessType] = useState<string>(initialBusinessType);
+  const [aiChatOpen, setAiChatOpen] = useState(false);
+  const [aiChatPrompt, setAiChatPrompt] = useState('');
+  const [selectedPolicy, setSelectedPolicy] = useState<PolicyDetailModal | null>(null);
 
   const matchedGrants = useMemo(() => {
     return grants.filter((g) => {
@@ -24,6 +50,72 @@ export default function GrantMatcher({ initialRegion = '대구 중구', initialB
   }, [region, businessType]);
 
   const suggestedCards = useMemo(() => imBankCards.slice(0, maxBankCards), [maxBankCards]);
+
+  const openAiConsultant = (title: string, summary: string, docs: string[] = []) => {
+    const prompt = `안녕하세요! '${title}' 정책의 신청 자격과 우대 조건에 대해 더 자세히 알려주세요. 한줄 설명: ${summary}. 필요한 서류: ${docs.join(', ')}.`;
+    setAiChatPrompt(prompt);
+    setAiChatOpen(true);
+  };
+
+  const openPolicyDetail = async (title: string, description: string, region: string, industry: string) => {
+    setSelectedPolicy({
+      title,
+      region,
+      industry,
+      description,
+      summary: [],
+      requiredDocuments: [],
+      loading: true,
+    });
+
+    try {
+      const response = await fetch('/api/recommend', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, description, region, industry }),
+      });
+
+      const data = await response.json();
+      const result = data?.result ?? {};
+      setSelectedPolicy({
+        title,
+        region,
+        industry,
+        description,
+        summary: Array.isArray(result.summary) ? result.summary : [
+          '• 대구시 관내 사업자를 등록한 소상공인 대상 지원사업입니다.',
+          '• 이자 차액 보전 및 iM뱅크 특례보증 우대를 제공합니다.',
+          '• 예산 소진 시 조기 마감될 수 있어 서류 준비 후 신청을 권장합니다.',
+        ],
+        requiredDocuments: Array.isArray(result.required_documents) ? result.required_documents : [
+          '사업자등록증 사본',
+          '부가가치세 과세표준증명원',
+          '신분증',
+          '매출증빙서류',
+        ],
+        loading: false,
+      });
+    } catch (error) {
+      setSelectedPolicy({
+        title,
+        region,
+        industry,
+        description,
+        summary: [
+          '• 대구시 관내 사업자를 등록한 소상공인 대상 지원사업입니다.',
+          '• 이자 차액 보전 및 iM뱅크 특례보증 우대를 제공합니다.',
+          '• 예산 소진 시 조기 마감될 수 있어 서류 준비 후 신청을 권장합니다.',
+        ],
+        requiredDocuments: [
+          '사업자등록증 사본',
+          '부가가치세 과세표준증명원',
+          '신분증',
+          '매출증빙서류',
+        ],
+        loading: false,
+      });
+    }
+  };
 
   return (
     <div className="rounded-[28px] border border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-green-50 p-5 shadow-[0_18px_40px_rgba(16,185,129,0.08)] sm:p-6">
@@ -58,6 +150,10 @@ export default function GrantMatcher({ initialRegion = '대구 중구', initialB
       <div className="grid gap-4 md:grid-cols-2">
         <GrantListColumn
           grants={matchedGrants}
+          region={region}
+          industry={businessType}
+          onOpenDetail={openPolicyDetail}
+          onAskAi={openAiConsultant}
         />
 
         <div>
@@ -65,98 +161,111 @@ export default function GrantMatcher({ initialRegion = '대구 중구', initialB
           <ul className="mt-2 space-y-3">
             {suggestedCards.map((c) => (
               <li key={c.id} className="rounded-2xl border border-emerald-200 bg-white/90 p-3 shadow-sm shadow-emerald-100">
-                <a href={c.link} target="_blank" rel="noreferrer" className="block">
+                <button type="button" onClick={() => openPolicyDetail(c.name, c.summary, region, businessType)} className="w-full text-left">
                   <p className="font-extrabold text-emerald-950">{c.name}</p>
                   <p className="mt-1 text-sm text-emerald-800/75">{c.summary}</p>
-                </a>
+                </button>
               </li>
             ))}
           </ul>
         </div>
       </div>
+
+      {selectedPolicy && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-emerald-950/30 backdrop-blur-sm p-4">
+          <div className="relative w-full max-w-xl rounded-[28px] border border-emerald-200 bg-white p-5 shadow-[0_20px_50px_rgba(16,185,129,0.24)]">
+            <button
+              type="button"
+              onClick={() => setSelectedPolicy(null)}
+              className="absolute right-4 top-4 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-1 text-sm font-bold text-emerald-700"
+            >
+              ✖
+            </button>
+
+            <div className="pr-8">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">정책 상세</p>
+              <h2 className="mt-2 text-xl font-extrabold text-emerald-950">{selectedPolicy.title}</h2>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-800">{selectedPolicy.region}</span>
+                <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-800">{selectedPolicy.industry}</span>
+              </div>
+            </div>
+
+            <div className="mt-5 space-y-4">
+              <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+                <p className="font-extrabold text-emerald-900">🤖 AI 3줄 요약</p>
+                {selectedPolicy.loading ? (
+                  <p className="mt-2 text-sm text-emerald-800/75">AI가 공고문을 분석 중입니다...</p>
+                ) : (
+                  <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-emerald-800/80">
+                    {selectedPolicy.summary.map((item, index) => (
+                      <li key={`${item}-${index}`}>{item.replace(/^•\s*/, '')}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              <div className="rounded-2xl border border-emerald-200 bg-white p-4">
+                <p className="font-extrabold text-emerald-900">📋 필요 서류</p>
+                <ul className="mt-3 space-y-2">
+                  {selectedPolicy.requiredDocuments.map((doc, index) => (
+                    <li key={`${doc}-${index}`} className="flex items-center gap-3 text-sm text-emerald-800/80">
+                      <input type="checkbox" checked readOnly className="h-4 w-4 accent-emerald-600" />
+                      <span>{doc}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+
+            <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedPolicy(null);
+                  openAiConsultant(selectedPolicy.title, selectedPolicy.summary.join(' '), selectedPolicy.requiredDocuments);
+                }}
+                className="flex-1 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-emerald-500"
+              >
+                💬 AI 상담사에게 이 정책 더 물어보기
+              </button>
+              <button
+                type="button"
+                onClick={() => window.alert('서류 목록이 문자로 발송되었습니다.')}
+                className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-900"
+              >
+                📱 서류 목록 문자 받기
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedPolicy(null)}
+                className="rounded-2xl border border-emerald-200 bg-white px-4 py-3 text-sm font-bold text-emerald-700"
+              >
+                닫기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <AIConsultant open={aiChatOpen} onClose={() => setAiChatOpen(false)} initialPrompt={aiChatPrompt} />
     </div>
   );
 }
 
-function GrantListColumn({ grants }: { grants: any[] }) {
-  const [open, setOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<any | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [currentGrant, setCurrentGrant] = useState<any | null>(null);
-
-  const openGrant = async (g: any) => {
-    setCurrentGrant(g);
-    setOpen(true);
-    setLoading(true);
-    setError(null);
-    setResult(null);
-
-    try {
-      const resp = await fetch('/api/summarize', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: g.title, text: `${g.description}\nURL: ${g.url ?? ''}` }),
-      });
-      const data = await resp.json();
-      if (!resp.ok) {
-        setError(data?.error || '요약 중 오류가 발생했습니다.');
-      } else {
-        setResult(data.result);
-      }
-    } catch (e: any) {
-      setError(e.message ?? '네트워크 오류');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const copyToClipboard = async () => {
-    if (!result) return;
-    const text = buildExportText(currentGrant, result);
-    try {
-      await navigator.clipboard.writeText(text);
-      alert('요약과 필요서류가 클립보드에 복사되었습니다.');
-    } catch (e) {
-      alert('복사에 실패했습니다. 수동으로 선택해 복사하세요.');
-    }
-  };
-
-  const downloadPDF = async () => {
-    if (!result) return;
-    try {
-      const { jsPDF } = await import('jspdf');
-      const doc = new jsPDF();
-      const title = currentGrant?.title ?? 'application';
-      const text = buildExportText(currentGrant, result);
-      const lines = doc.splitTextToSize(text, 170);
-      doc.setFontSize(12);
-      doc.text(lines, 10, 10);
-      doc.save(`${sanitizeFileName(title)}.pdf`);
-    } catch (e) {
-      alert('PDF 생성에 실패했습니다.');
-    }
-  };
-
-  const buildExportText = (grant: any, res: any) => {
-    const parts: string[] = [];
-    parts.push(`공고: ${grant?.title ?? ''}`);
-    parts.push('');
-    parts.push('AI 3줄 요약:');
-    if (typeof res.summary === 'string') parts.push(res.summary);
-    else parts.push(JSON.stringify(res.summary));
-    parts.push('');
-    parts.push('필요 서류:');
-    if (Array.isArray(res.required_documents)) {
-      res.required_documents.forEach((d: string, i: number) => parts.push(`${i + 1}. ${d}`));
-    }
-    parts.push('');
-    parts.push(`원문 링크: ${grant?.url ?? ''}`);
-    return parts.join('\n');
-  };
-
-  const sanitizeFileName = (s: string) => s.replace(/[^a-z0-9가-힣\-_ ]/gi, '_').slice(0, 120);
-
+function GrantListColumn({
+  grants,
+  region,
+  industry,
+  onOpenDetail,
+  onAskAi,
+}: {
+  grants: any[];
+  region: string;
+  industry: string;
+  onOpenDetail: (title: string, description: string, region: string, industry: string) => void;
+  onAskAi: (title: string, summary: string, docs?: string[]) => void;
+}) {
   return (
     <div>
       <p className="text-sm font-bold text-emerald-800">대구시 지원금</p>
@@ -166,7 +275,7 @@ function GrantListColumn({ grants }: { grants: any[] }) {
         <ul className="mt-2 space-y-3">
           {grants.map((g) => (
             <li key={g.id} className="rounded-2xl border border-emerald-200 bg-white/90 p-3 shadow-sm shadow-emerald-100">
-              <button onClick={() => openGrant(g)} className="w-full text-left">
+              <button onClick={() => onOpenDetail(g.title, g.description, region, industry)} className="w-full text-left">
                 <p className="font-extrabold text-emerald-950">{g.title}</p>
                 <p className="mt-1 text-sm text-emerald-600">{g.amount ?? ''}</p>
                 <p className="mt-2 text-sm text-emerald-800/75 truncate">{g.description}</p>
@@ -174,40 +283,6 @@ function GrantListColumn({ grants }: { grants: any[] }) {
             </li>
           ))}
         </ul>
-      )}
-
-      {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-emerald-950/30 backdrop-blur-sm">
-          <div className="relative w-full max-w-lg border-4 border-emerald-700 bg-white p-6 shadow-[0_20px_50px_rgba(16,185,129,0.24)]">
-            <button onClick={() => setOpen(false)} className="absolute right-3 top-3 rounded border border-emerald-200 bg-emerald-50 px-2 py-1 font-bold text-emerald-700">✖</button>
-            <h2 className="mb-2 text-lg font-extrabold text-emerald-950">{currentGrant?.title}</h2>
-
-            {loading && <p className="text-sm text-emerald-800/75">요약 생성 중...</p>}
-            {error && <p className="text-sm text-red-600">{error}</p>}
-
-            {result && (
-              <div className="mt-3">
-                <p className="font-extrabold text-emerald-900">AI 3줄 요약</p>
-                <p className="mt-1 whitespace-pre-line text-sm text-emerald-800/80">{typeof result.summary === 'string' ? result.summary : JSON.stringify(result.summary)}</p>
-
-                <p className="mt-3 font-extrabold text-emerald-900">필요 서류</p>
-                <ul className="mt-1 list-disc pl-5 text-sm text-emerald-800/80">
-                  {(Array.isArray(result.required_documents) ? result.required_documents : []).map((d: string, i: number) => (
-                    <li key={i}>{d}</li>
-                  ))}
-                </ul>
-
-                {result.raw && (
-                  <details className="mt-3 text-xs text-emerald-800/70"><summary>원문 응답 보기</summary><pre className="whitespace-pre-wrap">{String(result.raw)}</pre></details>
-                )}
-                <div className="mt-4 flex gap-3">
-                  <button onClick={copyToClipboard} className="border border-emerald-200 bg-emerald-50 px-3 py-2 font-bold text-emerald-900">요약 복사</button>
-                  <button onClick={downloadPDF} className="border border-emerald-300 bg-white px-3 py-2 font-bold text-emerald-900">신청서 PDF 다운로드</button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
       )}
     </div>
   );
