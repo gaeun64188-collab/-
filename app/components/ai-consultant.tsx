@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, PointerEvent as ReactPointerEvent, useEffect, useRef, useState } from "react";
 
 type ChatMessage = {
   role: "user" | "assistant";
@@ -41,6 +41,98 @@ export default function AIConsultant({
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [autoSubmitted, setAutoSubmitted] = useState(false);
+  const panelRef = useRef<HTMLDivElement | null>(null);
+  const dragOffsetRef = useRef({ x: 0, y: 0 });
+  const resizeOffsetRef = useRef({ startX: 0, startY: 0, startWidth: 360, startHeight: 520 });
+  const [position, setPosition] = useState({ x: 20, y: 20 });
+  const [size, setSize] = useState({ width: 360, height: 520 });
+
+  const clampSize = (nextWidth: number, nextHeight: number) => {
+    const maxWidth = Math.max(300, Math.min(window.innerWidth - 24, 480));
+    const maxHeight = Math.max(420, Math.min(window.innerHeight - 24, 680));
+
+    return {
+      width: Math.min(Math.max(nextWidth, 300), maxWidth),
+      height: Math.min(Math.max(nextHeight, 420), maxHeight),
+    };
+  };
+
+  const updatePosition = (nextX: number, nextY: number) => {
+    const panelWidth = size.width;
+    const panelHeight = size.height;
+    const maxX = Math.max(12, window.innerWidth - panelWidth - 12);
+    const maxY = Math.max(12, window.innerHeight - panelHeight - 12);
+
+    setPosition({
+      x: Math.min(Math.max(12, nextX), maxX),
+      y: Math.min(Math.max(12, nextY), maxY),
+    });
+  };
+
+  const resetPosition = () => {
+    const nextSize = clampSize(size.width, size.height);
+    const defaultX = Math.max(12, window.innerWidth - nextSize.width - 20);
+    const defaultY = Math.max(12, window.innerHeight - nextSize.height - 20);
+
+    setSize(nextSize);
+    setPosition({ x: defaultX, y: defaultY });
+  };
+
+  const handlePointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if ((event.target as HTMLElement).closest("button")) return;
+
+    dragOffsetRef.current = {
+      x: event.clientX - position.x,
+      y: event.clientY - position.y,
+    };
+
+    const handlePointerMove = (moveEvent: PointerEvent) => {
+      updatePosition(moveEvent.clientX - dragOffsetRef.current.x, moveEvent.clientY - dragOffsetRef.current.y);
+    };
+
+    const handlePointerUp = () => {
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerUp);
+    };
+
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", handlePointerUp);
+  };
+
+  const handleResizePointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    resizeOffsetRef.current = {
+      startX: event.clientX,
+      startY: event.clientY,
+      startWidth: size.width,
+      startHeight: size.height,
+    };
+
+    const handlePointerMove = (moveEvent: PointerEvent) => {
+      const nextWidth = resizeOffsetRef.current.startWidth + (moveEvent.clientX - resizeOffsetRef.current.startX);
+      const nextHeight = resizeOffsetRef.current.startHeight + (moveEvent.clientY - resizeOffsetRef.current.startY);
+      const nextSize = clampSize(nextWidth, nextHeight);
+
+      setSize(nextSize);
+      const maxX = Math.max(12, window.innerWidth - nextSize.width - 12);
+      const maxY = Math.max(12, window.innerHeight - nextSize.height - 12);
+
+      setPosition((prev) => ({
+        x: Math.min(Math.max(prev.x, 12), maxX),
+        y: Math.min(Math.max(prev.y, 12), maxY),
+      }));
+    };
+
+    const handlePointerUp = () => {
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerUp);
+    };
+
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", handlePointerUp);
+  };
 
   const submitPrompt = async (prompt: string) => {
     const trimmed = prompt.trim();
@@ -84,6 +176,11 @@ export default function AIConsultant({
   };
 
   useEffect(() => {
+    if (!open) return;
+    resetPosition();
+  }, [open]);
+
+  useEffect(() => {
     if (!open || !initialPrompt.trim()) return;
     if (autoSubmitted) return;
 
@@ -106,8 +203,22 @@ export default function AIConsultant({
   };
 
   return (
-    <div className="fixed bottom-5 right-5 z-50 w-[360px] max-w-[calc(100vw-24px)] overflow-hidden rounded-[24px] border border-emerald-200 bg-white shadow-[0_24px_70px_rgba(16,185,129,0.2)]">
-      <div className="flex items-center justify-between border-b border-emerald-100 bg-gradient-to-r from-emerald-600 via-emerald-500 to-green-500 px-4 py-3 text-white">
+    <div
+      ref={panelRef}
+      className="fixed z-50 overflow-hidden rounded-[24px] border border-emerald-200 bg-white shadow-[0_24px_70px_rgba(16,185,129,0.2)]"
+      style={{
+        left: position.x,
+        top: position.y,
+        width: size.width,
+        height: size.height,
+        maxWidth: "calc(100vw - 24px)",
+        maxHeight: "calc(100vh - 24px)",
+      }}
+    >
+      <div
+        className="flex cursor-grab items-center justify-between border-b border-emerald-100 bg-gradient-to-r from-emerald-600 via-emerald-500 to-green-500 px-4 py-3 text-white active:cursor-grabbing"
+        onPointerDown={handlePointerDown}
+      >
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-50/80">AI 상담사</p>
           <h3 className="mt-1 text-base font-bold">대구 소상공인 맞춤 상담</h3>
@@ -121,8 +232,8 @@ export default function AIConsultant({
         </button>
       </div>
 
-      <div className="flex max-h-[440px] flex-col gap-3 bg-emerald-50/40 p-3">
-        <div className="space-y-3 overflow-y-auto pr-1">
+      <div className="flex min-h-0 flex-1 flex-col gap-3 bg-emerald-50/40 p-3">
+        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
           {messages.map((message, index) => (
             <div
               key={`${message.role}-${index}`}
@@ -160,6 +271,13 @@ export default function AIConsultant({
           </div>
         </form>
       </div>
+
+      <div
+        className="absolute bottom-1 right-1 h-5 w-5 cursor-se-resize rounded-full border border-emerald-200 bg-white/90 shadow-sm"
+        onPointerDown={handleResizePointerDown}
+        aria-label="상담 창 크기 조절"
+        title="상담 창 크기 조절"
+      />
     </div>
   );
 }

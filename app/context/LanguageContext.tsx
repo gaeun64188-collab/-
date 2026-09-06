@@ -64,6 +64,23 @@ export type TranslationDict = {
   marketScoreValue: string;
   marketTrafficValue: string;
   marketDaeguPayValue: string;
+  marketingTitle: string;
+  marketingSubtitle: string;
+  marketingIndustryLabel: string;
+  marketingEventLabel: string;
+  marketingTargetLabel: string;
+  marketingGenerate: string;
+  marketingCopy: string;
+  copySuccess: string;
+  marketingShare: string;
+  marketingModeInstagram: string;
+  marketingModeLocal: string;
+  marketingModeSms: string;
+  marketingBenefitTitle: string;
+  marketingBenefitItem1: string;
+  marketingBenefitItem2: string;
+  marketingBenefitItem3: string;
+  marketingBenefitTotal: string;
 };
 
 const STORAGE_KEY = "im-platform-lang";
@@ -122,6 +139,23 @@ const dictionary: Record<Language, TranslationDict> = {
     marketScoreValue: "88점 (상위 12%)",
     marketTrafficValue: "2030 여성 (퇴근 시간대 18시~21시 피크)",
     marketDaeguPayValue: "높음 (월 평균 결제 1,420건)",
+    marketingTitle: "AI 기반 홍보 문구 & SNS 콘텐츠 자동 생성기",
+    marketingSubtitle: "업종, 이벤트, 타깃 정보를 바탕으로 인스타그램·당근마켓·문자까지 한 번에 생성해 보세요.",
+    marketingIndustryLabel: "업종",
+    marketingEventLabel: "이벤트 내용",
+    marketingTargetLabel: "주요 타깃",
+    marketingGenerate: "AI 문구 생성",
+    marketingCopy: "문구 복사하기",
+    copySuccess: "복사되었습니다",
+    marketingShare: "SNS 바로 공유",
+    marketingModeInstagram: "인스타그램 게시글 모드",
+    marketingModeLocal: "당근마켓 / 네이버 복비소 소식 모드",
+    marketingModeSms: "대구로페이 프로모션 SMS 모드",
+    marketingBenefitTitle: "우대금리 조건",
+    marketingBenefitItem1: "대구로페이 가맹점 우대: -0.2%p",
+    marketingBenefitItem2: "AI 상권분석 리포트 활용 매장: -0.2%p",
+    marketingBenefitItem3: "iM뱅크 자동이체 계좌 등록: -0.1%p",
+    marketingBenefitTotal: "최대 우대금리 혜택: -0.5%p 감면",
   },
   EN: {
     heroTitle: "Start making better commercial area choices.",
@@ -176,6 +210,23 @@ const dictionary: Record<Language, TranslationDict> = {
     marketScoreValue: "88 points (top 12%)",
     marketTrafficValue: "Women in their 20s–30s (peak 6PM–9PM)",
     marketDaeguPayValue: "High (avg. 1,420 payments/month)",
+    marketingTitle: "AI-powered promo copy & SNS content generator",
+    marketingSubtitle: "Generate Instagram, local community, and SMS content in one click from your industry, event, and target audience.",
+    marketingIndustryLabel: "Industry",
+    marketingEventLabel: "Event Details",
+    marketingTargetLabel: "Main Audience",
+    marketingGenerate: "Generate AI Copy",
+    marketingCopy: "Copy text",
+    copySuccess: "Copied!",
+    marketingShare: "Share on SNS",
+    marketingModeInstagram: "Instagram post mode",
+    marketingModeLocal: "Daangn / Naver community post mode",
+    marketingModeSms: "Daegu Pay promotion SMS mode",
+    marketingBenefitTitle: "Preferential rate conditions",
+    marketingBenefitItem1: "Daegu Pay merchant incentive: -0.2%p",
+    marketingBenefitItem2: "AI market analysis report store: -0.2%p",
+    marketingBenefitItem3: "iM Bank auto-transfer account: -0.1%p",
+    marketingBenefitTotal: "Maximum benefit: -0.5%p discount",
   },
   JP: {
     heroTitle: "より良い商圏選択を始めましょう。",
@@ -230,6 +281,23 @@ const dictionary: Record<Language, TranslationDict> = {
     marketScoreValue: "88点（上位12％）",
     marketTrafficValue: "20代〜30代女性（18時〜21時ピーク）",
     marketDaeguPayValue: "高い（月平均1,420件）",
+    marketingTitle: "AIによるプロモーション文言とSNSコンテンツ自動生成",
+    marketingSubtitle: "業種・イベント・ターゲット情報から、Instagram・地域コミュニティ・SMSまで一括生成できます。",
+    marketingIndustryLabel: "業種",
+    marketingEventLabel: "イベント内容",
+    marketingTargetLabel: "主要ターゲット",
+    marketingGenerate: "AI文言を生成",
+    marketingCopy: "文言をコピー",
+    copySuccess: "コピーしました",
+    marketingShare: "SNSで共有",
+    marketingModeInstagram: "Instagram投稿モード",
+    marketingModeLocal: "ダンギョン/ネイバーコミュニティ投稿モード",
+    marketingModeSms: "大邱ローペイプロモーションSMSモード",
+    marketingBenefitTitle: "優遇金利条件",
+    marketingBenefitItem1: "大邱ローペイ加盟店優遇: -0.2%p",
+    marketingBenefitItem2: "AI商圏分析リポート利用店舗: -0.2%p",
+    marketingBenefitItem3: "iM銀行自動振替口座登録: -0.1%p",
+    marketingBenefitTotal: "最大優遇金利: -0.5%p",
   },
   ZH: {
     heroTitle: "开始选择更好的商圈。",
@@ -284,6 +352,23 @@ const dictionary: Record<Language, TranslationDict> = {
     marketScoreValue: "88分（前12%）",
     marketTrafficValue: "20–30岁女性（18:00–21:00高峰）",
     marketDaeguPayValue: "高（月均1,420笔）",
+    marketingTitle: "AI驱动的促销文案与SNS内容自动生成器",
+    marketingSubtitle: "根据行业、活动和目标受众，一次生成Instagram、社区贴文和短信内容。",
+    marketingIndustryLabel: "行业",
+    marketingEventLabel: "活动内容",
+    marketingTargetLabel: "主要目标受众",
+    marketingGenerate: "生成 AI 文案",
+    marketingCopy: "复制文案",
+    copySuccess: "已复制",
+    marketingShare: "立即分享",
+    marketingModeInstagram: "Instagram 帖子模式",
+    marketingModeLocal: "当街/네이버社区帖子模式",
+    marketingModeSms: "大邱Pay 促销短信模式",
+    marketingBenefitTitle: "优惠利率条件",
+    marketingBenefitItem1: "大邱Pay 商户优惠: -0.2%p",
+    marketingBenefitItem2: "AI 商圈分析报告适用门店: -0.2%p",
+    marketingBenefitItem3: "iM银行自动转账账户注册: -0.1%p",
+    marketingBenefitTotal: "最高优惠利率: -0.5%p",
   },
 };
 

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { AnimatePresence, animate, motion, useMotionValue, useSpring } from "framer-motion";
 import { useEffect, useMemo, useRef, useState } from "react";
 import AIConsultant from "./components/ai-consultant";
@@ -301,6 +302,19 @@ export default function Home() {
   const [loginLoadingProvider, setLoginLoadingProvider] = useState<string | null>(null);
   const [activeNoticeTab, setActiveNoticeTab] = useState<"notice" | "event">("notice");
   const [isMarketAnalysisOpen, setIsMarketAnalysisOpen] = useState(false);
+  const [isMarketingModalOpen, setIsMarketingModalOpen] = useState(false);
+  const [isSettlementModalOpen, setIsSettlementModalOpen] = useState(false);
+  const [isStartupMatchingOpen, setIsStartupMatchingOpen] = useState(false);
+  const [startupStep, setStartupStep] = useState<1 | 2 | 3>(1);
+  const [startupAge, setStartupAge] = useState("20-29세");
+  const [startupRegion, setStartupRegion] = useState("중구");
+  const [startupSeed, setStartupSeed] = useState("3천만 원");
+  const [startupResult, setStartupResult] = useState("");
+  const [marketingIndustry, setMarketingIndustry] = useState("카페");
+  const [marketingEvent, setMarketingEvent] = useState("신메뉴 10% 할인");
+  const [marketingTarget, setMarketingTarget] = useState("2030 대학생");
+  const [marketingMode, setMarketingMode] = useState<"instagram" | "local" | "sms">("instagram");
+  const [copyToast, setCopyToast] = useState<string | null>(null);
   const [mapDistrict, setMapDistrict] = useState("대구 중구");
   const [mapIndustry, setMapIndustry] = useState("카페");
   const [mapMarker, setMapMarker] = useState<{ lat: number; lng: number; label: string }>({
@@ -311,10 +325,13 @@ export default function Home() {
   const [reportLocationName, setReportLocationName] = useState("대구 중구 동인동");
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
 
+  const router = useRouter();
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapInstanceRef = useRef<any | null>(null);
   const mapMarkerLayerRef = useRef<any | null>(null);
   const mapCircleLayerRef = useRef<any | null>(null);
+  const isMapModalOpen = isMarketAnalysisOpen;
+  const setIsMapModalOpen = setIsMarketAnalysisOpen;
 
   useEffect(() => {
     if (mapInstanceRef.current) {
@@ -391,7 +408,39 @@ export default function Home() {
   const currentData = useMemo(() => {
     const regionData = marketData[selectedRegion] ?? marketData["대구 중구"];
     const industryData = regionData[selectedIndustry] ?? regionData.카페;
-    return industryData[selectedRevenue] ?? industryData["3천만~5천만 원"] ?? defaultStats;
+    const baseEntry = industryData[selectedRevenue] ?? industryData["3천만~5천만 원"] ?? defaultStats;
+
+    const rawScore = Number.parseInt((baseEntry.score ?? "75").replace("%", ""), 10) || 75;
+    const regionAdjustment: Record<string, number> = {
+      "대구 중구": 8,
+      "대구 북구": 2,
+      "대구 수성구": 12,
+      "대구 달서구": 4,
+      "대구 동구": -2,
+    };
+    const industryAdjustment: Record<string, number> = {
+      카페: 6,
+      패션: -4,
+      식당: 12,
+      뷰티: -8,
+      교육: -10,
+    };
+    const revenueAdjustment: Record<string, number> = {
+      "1천만 원 이하": -12,
+      "1천만~3천만 원": -2,
+      "3천만~5천만 원": 8,
+      "5천만 원 이상": 15,
+    };
+
+    const adjustedScore = Math.min(
+      96,
+      Math.max(42, rawScore + (regionAdjustment[selectedRegion] ?? 0) + (industryAdjustment[selectedIndustry] ?? 0) + (revenueAdjustment[selectedRevenue] ?? 0)),
+    );
+
+    return {
+      ...baseEntry,
+      score: `${adjustedScore}%`,
+    };
   }, [selectedRegion, selectedIndustry, selectedRevenue]);
 
   const handleSocialLogin = async (provider: string) => {
@@ -462,102 +511,77 @@ export default function Home() {
       return;
     }
 
-    const L = (window as any).L;
-    if (!L) {
-      const styleLink = document.createElement("link");
-      styleLink.rel = "stylesheet";
-      styleLink.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
-      styleLink.dataset.leafletStyle = "true";
-      document.head.appendChild(styleLink);
+    const initializeLeafletMap = () => {
+      const Leaflet = (window as any).L;
+      if (!Leaflet || !mapContainerRef.current || mapInstanceRef.current) return;
 
-      const iconUrl = "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png";
-      const shadowUrl = "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png";
-      (window as any).L.Icon.Default.mergeOptions({
-        iconUrl,
-        shadowUrl,
-        iconRetinaUrl: iconUrl,
+      if (Leaflet.Icon && Leaflet.Icon.Default) {
+        const iconUrl = "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png";
+        const shadowUrl = "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png";
+        Leaflet.Icon.Default.mergeOptions({
+          iconUrl,
+          shadowUrl,
+          iconRetinaUrl: iconUrl,
+        });
+      }
+
+      const map = Leaflet.map(mapContainerRef.current, {
+        center: [35.8714, 128.6014],
+        zoom: 12,
+        maxBounds: [
+          [35.66, 128.36],
+          [36.05, 128.9],
+        ],
+        maxBoundsViscosity: 1.0,
+        zoomControl: true,
+        attributionControl: true,
       });
 
-      const script = document.createElement("script");
-      script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
-      script.async = true;
-      script.dataset.leafletScript = "true";
-      script.onload = () => {
-        const Leaflet = (window as any).L;
-        if (!mapContainerRef.current || mapInstanceRef.current || !Leaflet) return;
-        const map = Leaflet.map(mapContainerRef.current, {
-          center: [35.8714, 128.6014],
-          zoom: 12,
-          maxBounds: [
-            [35.66, 128.36],
-            [36.05, 128.9],
-          ],
-          maxBoundsViscosity: 1.0,
-          zoomControl: true,
-          attributionControl: true,
-        });
+      Leaflet.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 18,
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      }).addTo(map);
 
-        Leaflet.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-          maxZoom: 18,
-          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-        }).addTo(map);
+      mapInstanceRef.current = map;
+      const defaultCenter = districtCenterMap[mapDistrict] ?? districtCenterMap["대구 중구"];
+      updateMapPin(defaultCenter.lat, defaultCenter.lng, "대구시청", mapDistrict);
 
-        mapInstanceRef.current = map;
-        const defaultCenter = districtCenterMap[mapDistrict] ?? districtCenterMap["대구 중구"];
-        updateMapPin(defaultCenter.lat, defaultCenter.lng, "대구시청", mapDistrict);
+      map.on("click", (event: any) => {
+        const lat = event.latlng.lat;
+        const lng = event.latlng.lng;
+        const districtName = resolveDistrictFromCoordinates(lat, lng);
+        const nextLabel = getDongNameFromCoordinates(lat, lng);
+        updateMapPin(lat, lng, nextLabel, districtName);
+      });
+    };
 
-        map.on("click", (event: any) => {
-          const lat = event.latlng.lat;
-          const lng = event.latlng.lng;
-          const districtName = resolveDistrictFromCoordinates(lat, lng);
-          const nextLabel = getDongNameFromCoordinates(lat, lng);
-          updateMapPin(lat, lng, nextLabel, districtName);
-        });
-      };
-      document.body.appendChild(script);
+    const Leaflet = (window as any).L;
+    if (Leaflet) {
+      initializeLeafletMap();
       return () => {
-        setTimeout(() => {
-          script.remove();
-          styleLink.remove();
-        }, 0);
+        if (mapInstanceRef.current) {
+          mapInstanceRef.current.remove();
+          mapInstanceRef.current = null;
+        }
+        mapMarkerLayerRef.current = null;
+        mapCircleLayerRef.current = null;
       };
     }
 
-    if (!mapContainerRef.current || mapInstanceRef.current) {
-      return;
-    }
+    const styleLink = document.createElement("link");
+    styleLink.rel = "stylesheet";
+    styleLink.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+    styleLink.dataset.leafletStyle = "true";
+    document.head.appendChild(styleLink);
 
-    const map = L.map(mapContainerRef.current, {
-      center: [35.8714, 128.6014],
-      zoom: 12,
-      maxBounds: [
-        [35.66, 128.36],
-        [36.05, 128.9],
-      ],
-      maxBoundsViscosity: 1.0,
-      zoomControl: true,
-      attributionControl: true,
-      scrollWheelZoom: true,
-    });
-
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      maxZoom: 18,
-      minZoom: 9,
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-      noWrap: true,
-    }).addTo(map);
-
-    mapInstanceRef.current = map;
-    const defaultCenter = districtCenterMap[mapDistrict] ?? districtCenterMap["대구 중구"];
-    updateMapPin(defaultCenter.lat, defaultCenter.lng, "대구시청", mapDistrict);
-
-    map.on("click", (event: any) => {
-      const lat = event.latlng.lat;
-      const lng = event.latlng.lng;
-      const districtName = resolveDistrictFromCoordinates(lat, lng);
-      const nextLabel = getDongNameFromCoordinates(lat, lng);
-      updateMapPin(lat, lng, nextLabel, districtName);
-    });
+    const script = document.createElement("script");
+    script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+    script.async = true;
+    script.dataset.leafletScript = "true";
+    script.onload = () => {
+      initializeLeafletMap();
+    };
+    document.body.appendChild(script);
 
     return () => {
       if (mapInstanceRef.current) {
@@ -566,6 +590,10 @@ export default function Home() {
       }
       mapMarkerLayerRef.current = null;
       mapCircleLayerRef.current = null;
+      setTimeout(() => {
+        script.remove();
+        styleLink.remove();
+      }, 0);
     };
   }, [isMarketAnalysisOpen]);
 
@@ -580,18 +608,21 @@ export default function Home() {
 
   const heroBanners = [
     {
+      key: "settlement" as const,
       subtitle: "대구 전통시장 사장님을 위한 든든한 AI 파트너",
       title: "전통시장 소상공인 매출·정산·세무 AI 도우미",
       description: "복잡한 세무 신고부터 대구로페이 정산 내역까지 AI가 자동으로 요약하고 분석해 드립니다.",
       cta: "정산 도우미 시작하기 >",
     },
     {
+      key: "startup" as const,
       subtitle: "대구 청년 소상공인의 성공적인 첫걸음",
       title: "청년 창업 매칭 및 시드 금융 연결 AI",
       description: "iM뱅크 특례보증 금융과 지자체 창업 지원금을 매칭하여 시드 자금 마련을 도와드립니다.",
       cta: "창업 매칭 받아보기 >",
     },
     {
+      key: "market" as const,
       subtitle: "DIP·공공 빅데이터 기반 상권 분석",
       title: "골목상권 데이터 기반 AI 컨설팅",
       description: "대구 구·군별 유동인구와 카드 매출 데이터를 바탕으로 내 매장의 최적 마케팅 전략을 제안합니다.",
@@ -616,6 +647,30 @@ export default function Home() {
 
   const currentBanner = heroBanners[bannerIndex];
 
+  const handleHeroBannerAction = (key: "settlement" | "startup" | "market") => {
+    if (key === "settlement") {
+      setIsSettlementModalOpen(true);
+      return;
+    }
+
+    if (key === "startup") {
+      setStartupStep(1);
+      setStartupResult("");
+      setIsStartupMatchingOpen(true);
+      return;
+    }
+
+    setIsMapModalOpen(true);
+  };
+
+  const handleStartupMatch = () => {
+    const regionLabel = startupRegion || "중구";
+    const seedLabel = startupSeed || "3천만 원";
+    const recommendation = `추천 매칭: ${regionLabel} 내 전통시장 입지형 창업 + iM뱅크 특례보증 1.5억 한도\n- 지자체 창업지원금: ${seedLabel} 범위의 초기 창업 자금 보전\n- 보증지원: 1차 특례보증 우대 금리 적용\n- 추천 조합: 대구시 청년 창업 시드 지원 + iM뱅크 소상공인 대출 연결`;
+    setStartupResult(recommendation);
+    setStartupStep(3);
+  };
+
   const goToBanner = (offset: number) => {
     setBannerIndex((prev) => (prev + offset + heroBanners.length) % heroBanners.length);
   };
@@ -635,7 +690,7 @@ export default function Home() {
     { label: "💰 " + t.quick2, key: "grant" },
     { label: "🏦 " + t.quick3, key: "finance" },
     { label: "📄 " + t.quick4, key: "generator" },
-    { label: "📣 " + t.quick5, key: "ai" },
+    { label: "📣 " + t.quick5, key: "marketing" },
   ];
   const languageOptions = ["KO", "EN", "JP", "ZH"] as const;
   const languageLabelMap = {
@@ -650,6 +705,39 @@ export default function Home() {
   const heroSubtitle = isLoggedIn ? t.heroWelcomeSubtitle : t.heroSub;
 
   const guideLabel = t.navGuide;
+
+  const marketingCopy = useMemo(() => {
+    const industry = marketingIndustry || "카페";
+    const event = marketingEvent || "신메뉴 10% 할인";
+    const target = marketingTarget || "2030 대학생";
+
+    const instagramBase = {
+      KO: `✨ ${industry}에서 ${event}!\n\n우리 매장만의 특별한 분위기와 맛으로 한정된 혜택을 준비했어요. ${target}분들께 딱 맞는 공간에서 여유로운 시간 보내세요!\n\n📍 대구 동성로 / 중구 중심 상권\n💬 지금 바로 방문해 주세요\n\n#대구맛집 #${industry} #${target.replace(/\s+/g, "")} #동성로맛집 #대구로페이`,
+      EN: `✨ ${industry} is hosting ${event}!\n\nWe prepared a special offer and cozy vibe for our customers. Perfect for ${target} looking for a memorable visit.\n\n📍 Central Daegu area\n💬 Visit us today!\n\n#DaeguFood #${industry} #${target.replace(/\s+/g, "")} #SmallBusinessPromotion`,
+      JP: `✨ ${industry}で${event}を開催中！\n\n落ち着いた空間と特別な味で、${target}の皆さまにぴったりの時間を提供しています。\n\n📍 大邱中心商圏\n💬 ぜひお越しください\n\n#大邱グルメ #${industry} #${target.replace(/\s+/g, "")} #おすすめスポット`,
+      ZH: `✨ ${industry}正在举办${event}！\n\n我们为${target}准备了独特氛围与优惠体验，欢迎来店感受不一样的消费体验。\n\n📍 大邱核心商圈\n💬 现在就来看看吧\n\n#大邱美食 #${industry} #${target.replace(/\s+/g, "")} #本地好店`,
+    } as const;
+
+    const localBase = {
+      KO: `동네 주민분들께 ${industry} ${event} 소식을 전해드립니다!\n\n우리 동네에서 부담 없이 즐길 수 있는 혜택과 분위기를 준비했어요. ${target} 고객님께 딱 맞는 기회입니다.\n\n📌 오늘부터 한정 기간\n📍 대구 중구/동성로 인근\n💬 문의는 댓글 또는 문자로 부탁드립니다.`,
+      EN: `Hello neighbors! We are running ${event} at ${industry}.\n\nA friendly, value-focused offer for ${target} customers is available for a limited time.\n\n📌 Limited-time event\n📍 Near central Daegu\n💬 Reach out by message for details.`,
+      JP: `${industry}で${event}を開催します！\n\n地域の皆さまに親しみやすい価格と雰囲気で、${target}の方におすすめの機会です。\n\n📌 期間限定\n📍 大邱中心部周辺\n💬 気になる方はDMまたは電話でお問い合わせください。`,
+      ZH: `各位邻里朋友，${industry}正在举办${event}！\n\n我们为${target}打造了轻松愉快的消费体验，限时优惠，欢迎来到本地店铺。\n\n📌 限时活动\n📍 大邱市中心附近\n💬 详情可留言咨询。`,
+    } as const;
+
+    const smsBase = {
+      KO: `안녕하세요. ${industry}입니다.\n\n${event} 이벤트를 진행 중이며, ${target} 고객님께 딱 맞는 혜택을 준비했습니다.\n\n📌 기간: 이번 주 한정\n📍 위치: 대구 중심 상권\n💬 방문 전 예약 가능\n\n대구로페이 결제 시 추가 혜택도 함께 받을 수 있습니다.`,
+      EN: `Hello, this is ${industry}.\n\nWe are running ${event} and prepared a special offer for ${target} customers.\n\n📌 Limited period\n📍 Central Daegu\n💬 Reservation available\n\nDaegu Pay members can also enjoy extra benefits.`,
+      JP: `こんにちは。${industry}です。\n\n${event}を実施中で、${target}の皆さまにぴったりの特典を用意しました。\n\n📌 期間限定\n📍 大邱中心部\n💬 事前予約可能\n\n大邱ローペイ決済でも追加特典があります。`,
+      ZH: `您好，这里是${industry}。\n\n我们正在开展${event}活动，专门为${target}客户准备了优惠。\n\n📌 限时活动\n📍 大邱市中心\n💬 可提前预约\n\n使用大邱Pay支付还可享额外优惠。`,
+    } as const;
+
+    return {
+      instagram: instagramBase[lang],
+      local: localBase[lang],
+      sms: smsBase[lang],
+    };
+  }, [lang, marketingEvent, marketingIndustry, marketingTarget]);
 
   const nextLanguage = () => {
     const currentIndex = languageOptions.indexOf(lang);
@@ -749,6 +837,7 @@ export default function Home() {
                 <div className="mt-6 flex flex-wrap items-center gap-3">
                   <button
                     type="button"
+                    onClick={() => handleHeroBannerAction(currentBanner.key)}
                     className="rounded-full bg-emerald-600 px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-500"
                   >
                     {currentBanner.cta}
@@ -983,6 +1072,14 @@ export default function Home() {
                   setIsMarketAnalysisOpen(true);
                   return;
                 }
+                if (action.key === "finance") {
+                  window.location.href = "/im-rate";
+                  return;
+                }
+                if (action.key === "marketing") {
+                  setIsMarketingModalOpen(true);
+                  return;
+                }
                 setIsAiOpen(true);
               }}
               className="rounded-[22px] border border-emerald-200 bg-white px-4 py-4 text-left shadow-[0_10px_28px_rgba(16,185,129,0.06)] transition hover:border-emerald-300 hover:shadow-[0_14px_28px_rgba(16,185,129,0.12)]"
@@ -1117,6 +1214,209 @@ export default function Home() {
               <p className="text-center text-sm text-slate-500">
                 로그인 기능은 준비 중입니다.
               </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isSettlementModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/45 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-3xl overflow-hidden rounded-[32px] border border-emerald-200 bg-white shadow-[0_30px_80px_rgba(15,118,110,0.2)]">
+            <div className="flex items-center justify-between border-b border-emerald-100 bg-emerald-600 px-5 py-4 text-white sm:px-6">
+              <div>
+                <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-100">전통시장 AI 정산 대시보드</div>
+                <h3 className="mt-1 text-xl font-extrabold">대구로페이 정산 요약</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsSettlementModalOpen(false)}
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-lg font-bold transition hover:bg-white/15"
+                aria-label="정산 대시보드 닫기"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="grid gap-4 bg-slate-50 p-5 md:grid-cols-3">
+              <div className="rounded-[22px] border border-emerald-100 bg-white p-4 shadow-sm">
+                <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">일별 정산</div>
+                <div className="mt-3 text-2xl font-extrabold text-emerald-700">₩ 1,240,800</div>
+                <div className="mt-2 text-sm text-slate-600">전일 대비 +8.2%</div>
+              </div>
+              <div className="rounded-[22px] border border-emerald-100 bg-white p-4 shadow-sm">
+                <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">주별 정산</div>
+                <div className="mt-3 text-2xl font-extrabold text-emerald-700">₩ 7,480,000</div>
+                <div className="mt-2 text-sm text-slate-600">이번 주 누적 합계</div>
+              </div>
+              <div className="rounded-[22px] border border-emerald-100 bg-white p-4 shadow-sm">
+                <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">세무 체크</div>
+                <div className="mt-3 text-2xl font-extrabold text-emerald-700">92점</div>
+                <div className="mt-2 text-sm text-slate-600">AI 점검 상태 양호</div>
+              </div>
+            </div>
+
+            <div className="grid gap-5 p-5 md:grid-cols-[1.2fr_0.8fr]">
+              <div className="rounded-[24px] border border-emerald-100 bg-emerald-50 p-4">
+                <div className="text-base font-extrabold text-emerald-900">AI 세무/부가세 체크리스트</div>
+                <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-700">
+                  <li>• 전자세금계산서 매칭 상태: 정상</li>
+                  <li>• 부가세 신고 누락 항목: 0건</li>
+                  <li>• 카드 매출-현금 매출 정합성: 97.2%</li>
+                  <li>• 영수증 자동 분류 상태: 5개 미확인 항목 보정 필요</li>
+                </ul>
+              </div>
+
+              <div className="rounded-[24px] border border-emerald-100 bg-white p-4 shadow-sm">
+                <div className="text-base font-extrabold text-emerald-900">영수증 요약</div>
+                <div className="mt-3 space-y-3 text-sm text-slate-700">
+                  <div className="rounded-2xl bg-slate-50 p-3">
+                    <div className="font-semibold text-slate-800">오늘 정산 리포트</div>
+                    <div className="mt-1">✅ 23건 매출 반영</div>
+                  </div>
+                  <div className="rounded-2xl bg-slate-50 p-3">
+                    <div className="font-semibold text-slate-800">주간 정산 리포트</div>
+                    <div className="mt-1">✅ 세무 서류 자동 정리 완료</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-5 pt-0">
+              <button
+                type="button"
+                onClick={() => setIsSettlementModalOpen(false)}
+                className="w-full rounded-full bg-emerald-600 px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-500"
+              >
+                정산 리포트 확인하기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isStartupMatchingOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/45 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-2xl overflow-hidden rounded-[32px] border border-emerald-200 bg-white shadow-[0_30px_80px_rgba(15,118,110,0.2)]">
+            <div className="flex items-center justify-between border-b border-emerald-100 bg-emerald-600 px-5 py-4 text-white sm:px-6">
+              <div>
+                <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-100">청년 창업 시드 금융 매칭</div>
+                <h3 className="mt-1 text-xl font-extrabold">Step {startupStep}</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsStartupMatchingOpen(false);
+                  setStartupStep(1);
+                  setStartupResult("");
+                }}
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-lg font-bold transition hover:bg-white/15"
+                aria-label="창업 매칭 닫기"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="p-5">
+              {startupStep === 1 && (
+                <div className="space-y-5">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-700">[1단계: 나이/지역]</p>
+                    <div className="mt-3 grid gap-4 md:grid-cols-2">
+                      <label className="block">
+                        <span className="mb-2 block text-sm font-medium text-slate-600">나이대</span>
+                        <select
+                          value={startupAge}
+                          onChange={(event) => setStartupAge(event.target.value)}
+                          className="w-full rounded-2xl border border-emerald-100 bg-white px-3 py-3 text-sm font-medium text-slate-800 outline-none transition focus:border-emerald-300"
+                        >
+                          <option value="20-29세">20-29세</option>
+                          <option value="30-34세">30-34세</option>
+                          <option value="35-39세">35-39세</option>
+                        </select>
+                      </label>
+
+                      <label className="block">
+                        <span className="mb-2 block text-sm font-medium text-slate-600">희망 지역</span>
+                        <select
+                          value={startupRegion}
+                          onChange={(event) => setStartupRegion(event.target.value)}
+                          className="w-full rounded-2xl border border-emerald-100 bg-white px-3 py-3 text-sm font-medium text-slate-800 outline-none transition focus:border-emerald-300"
+                        >
+                          <option value="중구">중구</option>
+                          <option value="북구">북구</option>
+                          <option value="수성구">수성구</option>
+                          <option value="달서구">달서구</option>
+                        </select>
+                      </label>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setStartupStep(2)}
+                    className="w-full rounded-full bg-emerald-600 px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-500"
+                  >
+                    다음 단계로
+                  </button>
+                </div>
+              )}
+
+              {startupStep === 2 && (
+                <div className="space-y-5">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-700">[2단계: 필요한 시드 자금]</p>
+                    <label className="mt-3 block">
+                      <span className="mb-2 block text-sm font-medium text-slate-600">필요 자금 규모</span>
+                      <select
+                        value={startupSeed}
+                        onChange={(event) => setStartupSeed(event.target.value)}
+                        className="w-full rounded-2xl border border-emerald-100 bg-white px-3 py-3 text-sm font-medium text-slate-800 outline-none transition focus:border-emerald-300"
+                      >
+                        <option value="1천만 원">1천만 원</option>
+                        <option value="3천만 원">3천만 원</option>
+                        <option value="5천만 원">5천만 원</option>
+                        <option value="1억 원">1억 원</option>
+                      </select>
+                    </label>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleStartupMatch}
+                    className="w-full rounded-full bg-emerald-600 px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-500"
+                  >
+                    AI 매칭 결과보기
+                  </button>
+                </div>
+              )}
+
+              {startupStep === 3 && (
+                <div className="space-y-5">
+                  <div className="rounded-[24px] border border-emerald-200 bg-emerald-50 p-4">
+                    <div className="text-sm font-semibold text-emerald-800">AI 매칭 결과</div>
+                    <div className="mt-3 whitespace-pre-line text-sm leading-7 text-slate-700">{startupResult || "추천 결과를 생성할 수 없습니다."}</div>
+                  </div>
+
+                  <div className="rounded-[20px] border border-slate-200 bg-slate-50 p-4 text-sm leading-6 text-slate-700">
+                    <div className="font-semibold text-slate-800">추천 조건</div>
+                    <div className="mt-2">• 나이대: {startupAge}</div>
+                    <div>• 지역: {startupRegion}</div>
+                    <div>• 신청 자금: {startupSeed}</div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsStartupMatchingOpen(false);
+                      setStartupStep(1);
+                      setStartupResult("");
+                    }}
+                    className="w-full rounded-full bg-emerald-600 px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-500"
+                  >
+                    완료
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -1266,6 +1566,151 @@ export default function Home() {
             >
               보고서 저장 및 확인
             </button>
+          </div>
+        </div>
+      )}
+
+      {isMarketingModalOpen && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-900/45 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-5xl overflow-hidden rounded-[32px] border border-emerald-200 bg-white shadow-[0_30px_80px_rgba(15,118,110,0.2)]">
+            <div className="flex items-center justify-between border-b border-emerald-100 bg-emerald-600 px-5 py-4 text-white sm:px-6">
+              <div>
+                <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-emerald-100">AI marketing</div>
+                <h3 className="mt-1 text-xl font-extrabold">{t.marketingTitle}</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsMarketingModalOpen(false)}
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-lg font-bold transition hover:bg-white/15"
+                aria-label="닫기"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="grid gap-0 lg:grid-cols-[420px_1fr]">
+              <div className="border-b border-emerald-100 bg-emerald-50/60 p-5 lg:border-b-0 lg:border-r">
+                <p className="text-sm leading-6 text-slate-600">{t.marketingSubtitle}</p>
+
+                <div className="mt-5 space-y-4">
+                  <label className="block">
+                    <span className="mb-2 block text-sm font-semibold text-slate-700">{t.marketingIndustryLabel}</span>
+                    <select
+                      value={marketingIndustry}
+                      onChange={(event) => setMarketingIndustry(event.target.value)}
+                      className="w-full rounded-2xl border border-emerald-100 bg-white px-3 py-3 text-sm font-medium text-slate-800 outline-none transition focus:border-emerald-300"
+                    >
+                      {['카페', '음식점', '뷰티', '패션', '교육'].map((industry) => (
+                        <option key={industry} value={industry}>{industry}</option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="block">
+                    <span className="mb-2 block text-sm font-semibold text-slate-700">{t.marketingEventLabel}</span>
+                    <input
+                      type="text"
+                      value={marketingEvent}
+                      onChange={(event) => setMarketingEvent(event.target.value)}
+                      className="w-full rounded-2xl border border-emerald-100 bg-white px-3 py-3 text-sm font-medium text-slate-800 outline-none transition focus:border-emerald-300"
+                    />
+                  </label>
+
+                  <label className="block">
+                    <span className="mb-2 block text-sm font-semibold text-slate-700">{t.marketingTargetLabel}</span>
+                    <input
+                      type="text"
+                      value={marketingTarget}
+                      onChange={(event) => setMarketingTarget(event.target.value)}
+                      className="w-full rounded-2xl border border-emerald-100 bg-white px-3 py-3 text-sm font-medium text-slate-800 outline-none transition focus:border-emerald-300"
+                    />
+                  </label>
+                </div>
+
+                <div className="mt-6 rounded-[22px] border border-emerald-200 bg-white p-4 shadow-sm">
+                  <div className="text-xs font-bold uppercase tracking-[0.14em] text-emerald-700">{t.marketingBenefitTitle}</div>
+                  <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-700">
+                    <li>• {t.marketingBenefitItem1}</li>
+                    <li>• {t.marketingBenefitItem2}</li>
+                    <li>• {t.marketingBenefitItem3}</li>
+                  </ul>
+                  <div className="mt-3 rounded-full bg-emerald-600 px-3 py-2 text-center text-sm font-bold text-white">{t.marketingBenefitTotal}</div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setIsMarketingModalOpen(true)}
+                  className="mt-6 w-full rounded-full bg-emerald-600 px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-500"
+                >
+                  {t.marketingGenerate}
+                </button>
+              </div>
+
+              <div className="bg-slate-50 p-5">
+                <div className="flex flex-wrap gap-2">
+                  {([
+                    { key: "instagram", label: t.marketingModeInstagram },
+                    { key: "local", label: t.marketingModeLocal },
+                    { key: "sms", label: t.marketingModeSms },
+                  ] as const).map((option) => (
+                    <button
+                      key={option.key}
+                      type="button"
+                      onClick={() => setMarketingMode(option.key)}
+                      className={`rounded-full px-3 py-2 text-xs font-bold transition ${
+                        marketingMode === option.key
+                          ? "bg-emerald-600 text-white shadow-sm"
+                          : "border border-emerald-200 bg-white text-emerald-700 hover:border-emerald-300"
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="mt-5 rounded-[24px] border border-emerald-200 bg-white p-4 shadow-sm">
+                  <div className="whitespace-pre-line text-sm leading-7 text-slate-700">{marketingCopy[marketingMode]}</div>
+                </div>
+
+                <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        await navigator.clipboard.writeText(marketingCopy[marketingMode]);
+                        setCopyToast(t.copySuccess);
+                        window.setTimeout(() => setCopyToast(null), 1400);
+                      } catch (error) {
+                        console.error("clipboard write failed", error);
+                        setCopyToast("복사 실패");
+                        window.setTimeout(() => setCopyToast(null), 1400);
+                      }
+                    }}
+                    className="flex-1 rounded-full border border-emerald-200 bg-white px-4 py-3 text-sm font-bold text-emerald-700 transition hover:bg-emerald-50"
+                  >
+                    {copyToast ?? t.marketingCopy}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const shareText = marketingCopy[marketingMode];
+                      if (navigator.share) {
+                        try {
+                          await navigator.share({ title: t.marketingTitle, text: shareText });
+                          return;
+                        } catch (error) {
+                          console.error("share cancelled", error);
+                        }
+                      }
+                      window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}`, "_blank", "noopener,noreferrer");
+                    }}
+                    className="flex-1 rounded-full bg-emerald-600 px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-500"
+                  >
+                    {t.marketingShare}
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}
