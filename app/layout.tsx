@@ -1,32 +1,25 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import "leaflet/dist/leaflet.css";
-import { LanguageProvider } from "./context/LanguageContext";
-import "./globals.css";
+// ❌ 최상단 'use client'; 제거하기!
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
+import React from 'react';
+import { LanguageProvider } from './context/LanguageContext';
+import './globals.css';
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
-export const metadata: Metadata = {
-  title: "상권 분석 메인 화면",
-  description: "지역, 업종, 매출을 선택해 상권을 분석하는 메인 화면입니다.",
+export const metadata = {
+  title: 'Next.js App',
+  description: 'Daegu small-business support platform',
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
-    <html
-      lang="ko"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col">
-        <LanguageProvider>{children}</LanguageProvider>
+    <html lang="ko">
+      <body>
+        <LanguageProvider>
+          {children}
+        </LanguageProvider>
       </body>
     </html>
   );

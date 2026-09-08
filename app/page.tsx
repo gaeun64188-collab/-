@@ -1,12 +1,28 @@
-"use client";
+'use client';
+
+import React from 'react';
+// app/components 안에 위치하므로 './components/...' 로 불러옵니다!
+import dynamic from 'next/dynamic';
 
 import Link from "next/link";
+
 import { useRouter } from "next/navigation";
 import { AnimatePresence, animate, motion, useMotionValue, useSpring } from "framer-motion";
 import { useEffect, useMemo, useRef, useState } from "react";
 import AIConsultant from "./components/ai-consultant";
 import GrantMatcher from './components/grant-matcher';
+import DataSummary from "./components/data-summary";
+import FloatingChat from "./components/floating-chat";
+import Testimonials from "./components/testimonials";
+import GlobalSupportModal from "./components/global-support-modal";
 import { useLanguage } from "./context/LanguageContext";
+
+ 
+
+
+
+
+
 
 type MarketStats = {
   traffic: string;
@@ -20,6 +36,10 @@ type MarketStats = {
 };
 
 type MarketMap = Record<string, Record<string, Record<string, MarketStats>>>;
+
+
+
+
 
 const districts = ["대구 중구", "대구 북구", "대구 수성구", "대구 달서구", "대구 동구"];
 const industries = ["카페", "패션", "식당", "뷰티", "교육"];
@@ -291,12 +311,13 @@ function AnimatedNumber({
 
   return <motion.span style={{ opacity: springValue ? 1 : 1 }}>{formattedValue}</motion.span>;
 }
-
-export default function Home() {
+export default function Home()
+{
   const [selectedRegion, setSelectedRegion] = useState("대구 중구");
   const [selectedIndustry, setSelectedIndustry] = useState("카페");
   const [selectedRevenue, setSelectedRevenue] = useState("3천만~5천만 원");
   const [isAiOpen, setIsAiOpen] = useState(false);
+  const [isGlobalOpen, setIsGlobalOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [loginLoadingProvider, setLoginLoadingProvider] = useState<string | null>(null);
@@ -324,6 +345,8 @@ export default function Home() {
   });
   const [reportLocationName, setReportLocationName] = useState("대구 중구 동인동");
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+
+
 
   const router = useRouter();
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
@@ -386,6 +409,28 @@ export default function Home() {
   };
 
   const currentMapMetrics = districtAiMetrics[mapDistrict] ?? districtAiMetrics["대구 중구"];
+
+  const { districtPercentsComputed, regionalPayRate } = useMemo(() => {
+    const payments: Record<string, number> = {};
+    let total = 0;
+    Object.entries(districtAiMetrics).forEach(([k, v]) => {
+      const payText = v.pay || ""; // e.g. "높음 (월평균 1,420건)"
+      const m = payText.match(/(\d{1,3}(?:,\d{3})*)/);
+      const num = m ? Number(m[1].replace(/,/g, "")) : 0;
+      payments[k] = num;
+      total += num;
+    });
+
+    const districtPercentsComputed = Object.keys(payments).map((k) => ({
+      name: k.replace(/^대구\s*/, ""),
+      pct: total > 0 ? Math.round((payments[k] / total) * 100) : 0,
+    }));
+
+    const regionPay = payments[selectedRegion] ?? 0;
+    const regionalPayRate = total > 0 ? Math.round((regionPay / total) * 100) : 0;
+
+    return { districtPercentsComputed, regionalPayRate };
+  }, [districtAiMetrics, selectedRegion]);
 
   const getDongNameFromCoordinates = (lat: number, lng: number) => {
     if (lat > 35.82 && lat < 35.86 && lng > 128.49 && lng < 128.57) return "대구 달서구 두류동";
@@ -744,6 +789,7 @@ export default function Home() {
     const nextIndex = (currentIndex + 1) % languageOptions.length;
     setLang(languageOptions[nextIndex]);
   };
+  
 
   return (
     <main className="min-h-screen bg-[#edf8ef] text-slate-800">
@@ -760,7 +806,7 @@ export default function Home() {
                   <div className="mt-0.5 text-lg font-extrabold">플랫폼</div>
                 </div>
               </div>
-
+            
               <Link
                 href="/guide"
                 className="hidden whitespace-nowrap break-keep px-2 py-1 text-xs font-medium text-emerald-50 transition hover:text-white md:inline-flex md:text-sm"
@@ -776,6 +822,14 @@ export default function Home() {
                 className="shrink-0 rounded-full border border-white/20 bg-white/10 px-3 py-2 text-sm font-medium text-white transition hover:bg-white/15"
               >
                 {languageLabelMap[lang]} ▾
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsGlobalOpen(true)}
+                className="ml-2 hidden rounded-full border border-white/20 bg-white/10 px-3 py-2 text-sm font-medium text-white transition hover:bg-white/15 md:inline-flex"
+              >
+                🌐 {lang === "KO" ? "글로벌" : lang === "EN" ? "Global" : lang === "JP" ? "グローバル" : "全球"}
               </button>
 
               {!isLoggedIn ? (
@@ -808,11 +862,11 @@ export default function Home() {
 
       <div className="mx-auto max-w-[1180px] px-4 pb-10 pt-6 sm:px-6 lg:px-8">
         <motion.section
-          initial="hidden"
-          animate="visible"
-          variants={entranceVariants}
-          className="relative mx-auto my-6 overflow-hidden rounded-[28px] bg-white p-8 shadow-[0_12px_28px_rgba(13,148,136,0.08)] md:p-12"
-        >
+            initial="hidden"
+            animate="visible"
+            variants={entranceVariants}
+            className="relative mx-auto my-6 overflow-hidden rounded-[28px] bg-white p-8 shadow-[0_12px_28px_rgba(13,148,136,0.08)] md:p-12 hover:-translate-y-1 hover:shadow-lg transition-all duration-300"
+          >
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(16,185,129,0.10),_transparent_30%)]" />
           <div className="relative">
             <AnimatePresence mode="wait">
@@ -842,6 +896,12 @@ export default function Home() {
                   >
                     {currentBanner.cta}
                   </button>
+                </div>
+                {/* AI 실시간 연동 뱃지 (우측) */}
+                <div className="pointer-events-none absolute right-6 top-6 hidden h-32 w-40 transform-gpu items-center justify-center rounded-2xl p-4 text-center md:flex">
+                  <div className="bg-gradient-to-br from-emerald-500 to-teal-700 text-white rounded-2xl p-4 shadow-md flex flex-col justify-center items-center">
+                    <div className="text-sm font-semibold">AI 데이터 실시간 연동 중 ⚡</div>
+                  </div>
                 </div>
               </motion.div>
             </AnimatePresence>
@@ -995,7 +1055,7 @@ export default function Home() {
                 </span>
               </div>
 
-              <div className="mt-5 rounded-2xl border border-emerald-100 bg-white p-4 shadow-sm">
+              <div className="mt-5 rounded-2xl border border-emerald-100 bg-white p-4 shadow-sm hover:-translate-y-1 hover:shadow-lg transition-all duration-300">
                 <div className="flex items-center justify-between text-sm text-slate-600">
                   <span>대구로페이 결제 비중</span>
                   <span className="font-bold text-emerald-700">28%</span>
@@ -1006,14 +1066,14 @@ export default function Home() {
               </div>
 
               <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
-                <motion.div whileHover={{ y: -4, scale: 1.01 }} className="rounded-2xl border border-emerald-100 bg-white p-4 shadow-sm">
+                <motion.div whileHover={{ y: -4, scale: 1.01 }} className="rounded-2xl border border-emerald-100 bg-white p-4 shadow-sm hover:-translate-y-1 hover:shadow-lg transition-all duration-300">
                   <div className="text-xs font-medium uppercase tracking-[0.12em] text-slate-500">{t.cardSales}</div>
                   <div className="mt-2 text-2xl font-extrabold text-emerald-950">
                     <AnimatedNumber value={1420} suffix="만" />
                   </div>
                   <div className="mt-1 text-sm font-medium text-emerald-700">+8.5% 전월 대비</div>
                 </motion.div>
-                <motion.div whileHover={{ y: -4, scale: 1.01 }} className="rounded-2xl border border-emerald-100 bg-white p-4 shadow-sm">
+                <motion.div whileHover={{ y: -4, scale: 1.01 }} className="rounded-2xl border border-emerald-100 bg-white p-4 shadow-sm hover:-translate-y-1 hover:shadow-lg transition-all duration-300">
                   <div className="text-xs font-medium uppercase tracking-[0.12em] text-slate-500">{t.cardRate}</div>
                   <div className="mt-2 text-2xl font-extrabold text-emerald-950">
                     <AnimatedNumber value={0.5} suffix="%p" decimals={1} />
@@ -1034,6 +1094,8 @@ export default function Home() {
             </div>
           </div>
         </motion.section>
+
+        <DataSummary region={selectedRegion} districtPercents={districtPercentsComputed} payRate={regionalPayRate} />
 
         <motion.div
           initial="hidden"
@@ -1092,12 +1154,13 @@ export default function Home() {
       </div>
 
       <div className="mx-auto my-8 max-w-[1180px] px-4">
+        <Testimonials />
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           <motion.div
             initial="hidden"
             animate="visible"
             variants={entranceVariants}
-            className="lg:col-span-2 rounded-3xl border border-gray-100 bg-white p-6 shadow-sm"
+            className="lg:col-span-2 rounded-3xl border border-gray-100 bg-white p-6 shadow-sm hover:-translate-y-1 hover:shadow-lg transition-all duration-300"
           >
             <div className="mb-5 flex items-center justify-between border-b border-gray-100 pb-3">
               <div className="relative flex items-center gap-4">
@@ -1144,7 +1207,7 @@ export default function Home() {
             animate="visible"
             variants={entranceVariants}
             transition={{ delay: 0.1 }}
-            className="rounded-3xl border border-gray-100 bg-white p-6 shadow-sm"
+            className="rounded-3xl border border-gray-100 bg-white p-6 shadow-sm hover:-translate-y-1 hover:shadow-lg transition-all duration-300"
           >
             <h3 className="mb-4 text-base font-bold text-gray-900">{t.appTitle}</h3>
             <div className="flex items-center justify-around gap-4">
@@ -1171,6 +1234,10 @@ export default function Home() {
           </motion.div>
         </div>
       </div>
+
+
+
+
 
       <section className="mx-auto mt-8 max-w-[1180px] rounded-[28px] border border-emerald-200 bg-white/80 p-6 shadow-[0_18px_40px_rgba(16,185,129,0.06)] backdrop-blur-sm">
         <div className="flex flex-col gap-2 text-center sm:text-left">
@@ -1238,17 +1305,17 @@ export default function Home() {
             </div>
 
             <div className="grid gap-4 bg-slate-50 p-5 md:grid-cols-3">
-              <div className="rounded-[22px] border border-emerald-100 bg-white p-4 shadow-sm">
+              <div className="rounded-[22px] border border-emerald-100 bg-white p-4 shadow-sm hover:-translate-y-1 hover:shadow-lg transition-all duration-300">
                 <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">일별 정산</div>
                 <div className="mt-3 text-2xl font-extrabold text-emerald-700">₩ 1,240,800</div>
                 <div className="mt-2 text-sm text-slate-600">전일 대비 +8.2%</div>
               </div>
-              <div className="rounded-[22px] border border-emerald-100 bg-white p-4 shadow-sm">
+              <div className="rounded-[22px] border border-emerald-100 bg-white p-4 shadow-sm hover:-translate-y-1 hover:shadow-lg transition-all duration-300">
                 <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">주별 정산</div>
                 <div className="mt-3 text-2xl font-extrabold text-emerald-700">₩ 7,480,000</div>
                 <div className="mt-2 text-sm text-slate-600">이번 주 누적 합계</div>
               </div>
-              <div className="rounded-[22px] border border-emerald-100 bg-white p-4 shadow-sm">
+              <div className="rounded-[22px] border border-emerald-100 bg-white p-4 shadow-sm hover:-translate-y-1 hover:shadow-lg transition-all duration-300">
                 <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">세무 체크</div>
                 <div className="mt-3 text-2xl font-extrabold text-emerald-700">92점</div>
                 <div className="mt-2 text-sm text-slate-600">AI 점검 상태 양호</div>
@@ -1266,7 +1333,7 @@ export default function Home() {
                 </ul>
               </div>
 
-              <div className="rounded-[24px] border border-emerald-100 bg-white p-4 shadow-sm">
+              <div className="rounded-[24px] border border-emerald-100 bg-white p-4 shadow-sm hover:-translate-y-1 hover:shadow-lg transition-all duration-300">
                 <div className="text-base font-extrabold text-emerald-900">영수증 요약</div>
                 <div className="mt-3 space-y-3 text-sm text-slate-700">
                   <div className="rounded-2xl bg-slate-50 p-3">
@@ -1489,7 +1556,7 @@ export default function Home() {
                   </label>
                 </div>
 
-                <div className="mt-5 rounded-[24px] border border-emerald-200 bg-white p-4 shadow-sm">
+                <div className="mt-5 rounded-[24px] border border-emerald-200 bg-white p-4 shadow-sm hover:-translate-y-1 hover:shadow-lg transition-all duration-300">
                   <div className="flex items-center justify-between gap-3">
                     <span className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-700">{t.marketScore}</span>
                     <span className="text-right text-lg font-extrabold text-emerald-700">{currentMapMetrics.score}</span>
@@ -1627,7 +1694,7 @@ export default function Home() {
                   </label>
                 </div>
 
-                <div className="mt-6 rounded-[22px] border border-emerald-200 bg-white p-4 shadow-sm">
+                <div className="mt-6 rounded-[22px] border border-emerald-200 bg-white p-4 shadow-sm hover:-translate-y-1 hover:shadow-lg transition-all duration-300">
                   <div className="text-xs font-bold uppercase tracking-[0.14em] text-emerald-700">{t.marketingBenefitTitle}</div>
                   <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-700">
                     <li>• {t.marketingBenefitItem1}</li>
@@ -1668,7 +1735,7 @@ export default function Home() {
                   ))}
                 </div>
 
-                <div className="mt-5 rounded-[24px] border border-emerald-200 bg-white p-4 shadow-sm">
+                <div className="mt-5 rounded-[24px] border border-emerald-200 bg-white p-4 shadow-sm hover:-translate-y-1 hover:shadow-lg transition-all duration-300">
                   <div className="whitespace-pre-line text-sm leading-7 text-slate-700">{marketingCopy[marketingMode]}</div>
                 </div>
 
@@ -1715,6 +1782,8 @@ export default function Home() {
         </div>
       )}
 
+      <GlobalSupportModal open={isGlobalOpen} onClose={() => setIsGlobalOpen(false)} lang={lang} setLang={setLang} />
+      <FloatingChat />
       <AIConsultant open={isAiOpen} onClose={() => setIsAiOpen(false)} />
     </main>
   );
